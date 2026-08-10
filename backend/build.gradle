@@ -1,0 +1,64 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.2.5'
+	id 'io.spring.dependency-management' version '1.1.5'
+}
+
+group = 'br.com.amas'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(17)
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+def frontendDir = layout.projectDirectory.dir("../frontend")
+def generatedFrontendDir = layout.buildDirectory.dir("generated/frontend-static")
+
+dependencies {
+	// Spring Boot core
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+
+	// Banco de dados – MySQL (produção)
+	runtimeOnly 'com.mysql:mysql-connector-j'
+
+	// H2 in-memory (opcional — descomente se quiser rodar sem MySQL)
+	// runtimeOnly 'com.h2database:h2'
+
+	// Lombok
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+
+	// Testes
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+	testRuntimeOnly 'com.h2database:h2'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
+
+tasks.register('syncFrontendAssets', Copy) {
+	from(frontendDir) {
+		include '*.html'
+		include 'assets/**'
+		include 'css/**'
+		include 'js/**'
+	}
+	into generatedFrontendDir
+}
+
+tasks.named('processResources') {
+	dependsOn tasks.named('syncFrontendAssets')
+	from(generatedFrontendDir) {
+		into 'static'
+	}
+}
