@@ -13,7 +13,9 @@
 // - Celular físico com Expo Go: use o IP da rede local.
 // ─────────────────────────────────────────────────────────────────
 
-const LOCAL_NETWORK_IP = '192.168.0.10'; // <-- troque pelo IP da sua máquina
+// Default API host for development. Use 'localhost' for web/emulator
+// or replace with your machine IP when testing on a physical device.
+const LOCAL_NETWORK_IP = 'localhost'; // <-- 'localhost' works for expo web / simulator
 
 export const API_BASE = `http://${LOCAL_NETWORK_IP}:8080/api`;
 
