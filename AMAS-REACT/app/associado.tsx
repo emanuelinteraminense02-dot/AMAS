@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, ScrollView, StyleSheet, Alert } from 'react-native';
+import { View, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, spacing } from '@/constants/theme';
@@ -73,18 +73,14 @@ export default function AssociadoScreen() {
   }
 
   async function logout() {
-    Alert.alert('Sair', 'Deseja encerrar sua sessão?', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Sair',
-        style: 'destructive',
-        onPress: async () => {
-          if (sessao) registrarLog('Logout', sessao.nome, 'associado', 'Sessão encerrada');
-          await sessaoStorage.clear();
-          router.replace('/login');
-        },
-      },
-    ]);
+    if (sessao) registrarLog('Logout', sessao.nome, 'associado', 'Sessão encerrada');
+    setSidebarAberta(false);
+    setSessao(null);
+    try {
+      await sessaoStorage.clear();
+    } finally {
+      router.replace('/login');
+    }
   }
 
   if (checando || !assoc) return <LoadingBlock text="Carregando seu painel..." />;

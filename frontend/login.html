@@ -76,7 +76,7 @@
 
           <!-- Esqueci minha senha -->
           <div style="text-align:right;margin-top:6px;">
-            <button type="button" id="btnEsqueci" class="btn-link-esqueci">
+            <button type="button" id="btnEsqueci" class="btn-link-esqueci" onclick="abrirRecuperacaoSenha()">
               Esqueci minha senha
             </button>
           </div>
@@ -148,7 +148,7 @@
         <h3 class="modal-title"><i class="bi bi-key"></i> Esqueci minha senha</h3>
         <p style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">Digite seu e-mail para solicitar o reset ao administrador</p>
       </div>
-      <button class="modal-close" id="btnFecharEsqueci">✕</button>
+      <button type="button" class="modal-close" id="btnFecharEsqueci">✕</button>
     </div>
 
     <!-- Estado: formulário -->
@@ -158,7 +158,7 @@
         <input type="email" id="esqueciEmail" class="form-input" placeholder="seu@email.com" autocomplete="email">
       </div>
       <p id="esqueciErro" style="color:#ef4444;font-size:0.85rem;margin-bottom:12px;min-height:20px;"></p>
-      <button class="btn btn-primary" style="width:100%;justify-content:center;" id="btnSolicitarReset">
+      <button type="button" class="btn btn-primary" style="width:100%;justify-content:center;" id="btnSolicitarReset">
         Enviar solicitação
       </button>
       <p style="font-size:0.75rem;color:var(--text-muted);margin-top:14px;text-align:center;line-height:1.5;">
@@ -173,7 +173,7 @@
         <h4 id="esqueciSucessoNome">Solicitação enviada!</h4>
         <p>Sua solicitação foi registrada. O administrador irá resetar sua senha em breve.</p>
         <p class="es-instrucao">Após o reset, sua senha voltará para <strong>123456</strong>. Você será obrigado a criar uma nova senha no próximo login.</p>
-        <button class="btn btn-outline" style="margin-top:16px;width:100%;justify-content:center;" id="btnFecharEsqueciSucesso">
+        <button type="button" class="btn btn-outline" style="margin-top:16px;width:100%;justify-content:center;" id="btnFecharEsqueciSucesso">
           Entendido, fechar
         </button>
       </div>

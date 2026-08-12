@@ -25,6 +25,27 @@ function loginMostrarRedefinir(usuario) {
         "! Por segurança, crie uma nova senha antes de continuar.";
 }
 
+/* Abre o modal diretamente pelo botão, sem depender dos listeners de init. */
+function abrirRecuperacaoSenha() {
+  var modal = document.getElementById("modalEsqueci");
+  var formulario = document.getElementById("esqueciForm");
+  var sucesso = document.getElementById("esqueciSucesso");
+  var botao = document.getElementById("btnSolicitarReset");
+  if (!modal) return;
+
+  loginHideErro("esqueciErro");
+  if (formulario) formulario.classList.remove("hidden");
+  if (sucesso) sucesso.classList.add("hidden");
+  if (botao) {
+    botao.disabled = false;
+    botao.textContent = "Enviar solicitação";
+  }
+  modal.classList.remove("hidden");
+
+  var email = document.getElementById("esqueciEmail");
+  if (email) email.focus();
+}
+
 /* ── Função principal de login — chamada pelo botão onclick ─────────── */
 function executarLogin() {
   loginHideErro("loginErro");
@@ -204,6 +225,67 @@ document.addEventListener("DOMContentLoaded", function () {
     }
     formEsqueci.addEventListener("submit", function (e) { e.preventDefault(); return false; });
   }
+
+  var modalEsqueci = document.getElementById("modalEsqueci");
+  var esqueciFormModal = document.getElementById("esqueciForm");
+  var esqueciSucesso = document.getElementById("esqueciSucesso");
+  var btnAbrirEsqueci = document.getElementById("btnEsqueci");
+  var btnFecharEsqueci = document.getElementById("btnFecharEsqueci");
+  var btnFecharEsqueciSucesso = document.getElementById("btnFecharEsqueciSucesso");
+  var btnSolicitarReset = document.getElementById("btnSolicitarReset");
+
+  function fecharEsqueci() {
+    if (modalEsqueci) modalEsqueci.classList.add("hidden");
+  }
+
+  function abrirEsqueci() {
+    if (!modalEsqueci) return;
+    loginHideErro("esqueciErro");
+    if (esqueciFormModal) esqueciFormModal.classList.remove("hidden");
+    if (esqueciSucesso) esqueciSucesso.classList.add("hidden");
+    if (btnSolicitarReset) {
+      btnSolicitarReset.disabled = false;
+      btnSolicitarReset.textContent = "Enviar solicitação";
+    }
+    modalEsqueci.classList.remove("hidden");
+    var emailEl = document.getElementById("esqueciEmail");
+    if (emailEl) emailEl.focus();
+  }
+
+  if (btnAbrirEsqueci) btnAbrirEsqueci.addEventListener("click", abrirEsqueci);
+  if (btnFecharEsqueci) btnFecharEsqueci.addEventListener("click", fecharEsqueci);
+  if (btnFecharEsqueciSucesso) btnFecharEsqueciSucesso.addEventListener("click", fecharEsqueci);
+  if (modalEsqueci) modalEsqueci.addEventListener("click", function (e) {
+    if (e.target === modalEsqueci) fecharEsqueci();
+  });
+
+  if (btnSolicitarReset) btnSolicitarReset.addEventListener("click", function () {
+    var emailEl = document.getElementById("esqueciEmail");
+    var email = emailEl ? emailEl.value.trim() : "";
+    loginHideErro("esqueciErro");
+    if (!email) { loginShowErro("esqueciErro", "Informe o e-mail."); return; }
+
+    btnSolicitarReset.disabled = true;
+    btnSolicitarReset.textContent = "Enviando...";
+    solicitarResetSenha(email)
+      .then(function (res) {
+        if (!res || !res.ok) {
+          loginShowErro("esqueciErro", (res && res.erro) ? res.erro : "Erro ao enviar solicitação.");
+          btnSolicitarReset.disabled = false;
+          btnSolicitarReset.textContent = "Enviar solicitação";
+          return;
+        }
+        var nomeSucesso = document.getElementById("esqueciSucessoNome");
+        if (nomeSucesso) nomeSucesso.textContent = "Solicitação enviada para " + res.nome + "!";
+        if (esqueciFormModal) esqueciFormModal.classList.add("hidden");
+        if (esqueciSucesso) esqueciSucesso.classList.remove("hidden");
+      })
+      .catch(function (err) {
+        loginShowErro("esqueciErro", (err && err.message) ? err.message : "Erro ao enviar solicitação.");
+        btnSolicitarReset.disabled = false;
+        btnSolicitarReset.textContent = "Enviar solicitação";
+      });
+  });
 
   /* ── Redireciona se já logado ────────────────────────────────────── */
   var sessaoAtiva = (typeof getSessao === "function") ? getSessao() : null;

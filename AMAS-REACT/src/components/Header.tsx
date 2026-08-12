@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius } from '@/constants/theme';
@@ -9,9 +9,7 @@ export function Header() {
   return (
     <View style={styles.container}>
       <View style={styles.logoRow}>
-        <View style={styles.logoBadge}>
-          <Text style={styles.logoBadgeText}>A</Text>
-        </View>
+        <Image source={require('../../assets/logo-amas.png')} style={styles.logoImage} />
         <Text style={styles.logoText}>AMAS</Text>
       </View>
 
@@ -35,15 +33,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logoBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    backgroundColor: colors.azulDeep,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoBadgeText: { color: colors.azulMid, fontWeight: '800', fontSize: 16 },
+  logoImage: { width: 32, height: 32, borderRadius: 16 },
   logoText: { color: colors.azulDeep, fontWeight: '800', fontSize: 18, letterSpacing: 0.3 },
   loginBtn: {
     flexDirection: 'row',

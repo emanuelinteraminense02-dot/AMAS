@@ -38,7 +38,10 @@ export function AssocSidebar({
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents={visible ? 'auto' : 'none'}>
-      <Pressable style={[StyleSheet.absoluteFill, styles.backdrop]} onPress={onClose} />
+      <Pressable
+        style={[StyleSheet.absoluteFill, styles.backdrop, !visible && styles.backdropHidden]}
+        onPress={onClose}
+      />
       <Animated.View style={[styles.sidebar, { width: SIDEBAR_WIDTH, transform: [{ translateX }] }]}>
         <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
           {/* Avatar + info */}
@@ -93,6 +96,7 @@ export function AssocSidebar({
 
 const styles = StyleSheet.create({
   backdrop: { backgroundColor: 'rgba(15,17,32,0.5)' },
+  backdropHidden: { backgroundColor: 'transparent' },
   sidebar: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: colors.azulDeep },
   header: {
     padding: spacing.lg,

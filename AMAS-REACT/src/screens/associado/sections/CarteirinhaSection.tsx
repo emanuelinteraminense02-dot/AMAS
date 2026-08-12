@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, spacing, shadow } from '@/constants/theme';
 import { formatDataCurta } from '@/utils/format';
@@ -17,9 +17,7 @@ export function CarteirinhaSection({ assoc }: CarteirinhaSectionProps) {
       <View style={styles.card}>
         {/* Header do card */}
         <View style={styles.cardHeader}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoBadgeText}>A</Text>
-          </View>
+          <Image source={require('../../../../assets/logo-amas.png')} style={styles.logoImage} />
           <View>
             <Text style={styles.orgName}>AMAS</Text>
             <Text style={styles.orgSub}>Associação de São Sebastião</Text>
@@ -98,12 +96,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg },
-  logoBadge: {
-    width: 36, height: 36, borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.12)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  logoBadgeText: { color: colors.douradoClaro, fontWeight: '800', fontSize: 18 },
+  logoImage: { width: 40, height: 40, borderRadius: 20 },
   orgName: { color: colors.white, fontWeight: '800', fontSize: 15 },
   orgSub: { color: 'rgba(255,255,255,0.55)', fontSize: 10.5 },
   rfidIcon: { marginLeft: 'auto' },

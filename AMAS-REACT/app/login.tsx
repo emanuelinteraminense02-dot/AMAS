@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, ScrollView,
+  StyleSheet, ActivityIndicator, ScrollView, Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -129,9 +129,7 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         {/* Logo */}
         <View style={styles.logoWrap}>
-          <View style={styles.logoBadge}>
-            <Text style={styles.logoBadgeText}>A</Text>
-          </View>
+          <Image source={require('../assets/logo-amas.png')} style={styles.logoImage} />
           <Text style={styles.logoText}>AMAS</Text>
           <Text style={styles.logoSub}>Sistema de Gestão</Text>
         </View>
@@ -299,11 +297,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.azulDeep },
   scroll: { flexGrow: 1, paddingHorizontal: spacing.lg, paddingVertical: spacing.xxl, alignItems: 'center', justifyContent: 'center' },
   logoWrap: { alignItems: 'center', marginBottom: spacing.xl },
-  logoBadge: {
-    width: 56, height: 56, borderRadius: 16, backgroundColor: colors.navyMid,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 10,
-  },
-  logoBadgeText: { color: colors.douradoClaro, fontWeight: '800', fontSize: 26 },
+  logoImage: { width: 76, height: 76, borderRadius: 38, marginBottom: 10 },
   logoText: { color: colors.white, fontWeight: '800', fontSize: 22, letterSpacing: 0.4 },
   logoSub: { color: 'rgba(255,255,255,0.55)', fontSize: 12.5, marginTop: 2 },
   card: {

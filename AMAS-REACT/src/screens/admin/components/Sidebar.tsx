@@ -30,7 +30,10 @@ export function Sidebar({ visible, onClose, active, onSelect, adminNome, badges,
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents={visible ? 'auto' : 'none'}>
-      <Pressable style={[StyleSheet.absoluteFill, styles.backdrop]} onPress={onClose} />
+      <Pressable
+        style={[StyleSheet.absoluteFill, styles.backdrop, !visible && styles.backdropHidden]}
+        onPress={onClose}
+      />
       <Animated.View style={[styles.sidebar, { width: SIDEBAR_WIDTH, transform: [{ translateX }] }]}>
         <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
           <View style={styles.header}>
@@ -81,6 +84,7 @@ export function Sidebar({ visible, onClose, active, onSelect, adminNome, badges,
 
 const styles = StyleSheet.create({
   backdrop: { backgroundColor: 'rgba(15,17,32,0.5)' },
+  backdropHidden: { backgroundColor: 'transparent' },
   sidebar: {
     position: 'absolute',
     left: 0,
