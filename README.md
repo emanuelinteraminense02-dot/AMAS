@@ -113,6 +113,74 @@ npx expo start --web
 
 ---
 
+## Git e GitHub: versionar e enviar alterações
+
+Use os exemplos abaixo em qualquer projeto. Substitua `SeuUsuario`, `SeuLocal`, `nome-do-projeto`, `SEU_USUARIO`, `nome-do-repositorio` e a mensagem do commit pelos valores do seu computador e do seu projeto.
+
+> Antes de usar `git add .`, confira se arquivos sensíveis (por exemplo, `.env`, senhas e chaves) estão incluídos no `.gitignore`.
+
+### Enviar alterações para um repositório já configurado
+
+```powershell
+cd "C:\Users\SeuUsuario\SeuLocal\nome-do-projeto"
+
+# Confirme para qual repositório o projeto aponta
+git remote -v
+
+# Confira os arquivos que serão incluídos
+git status
+git add .
+
+# Use uma mensagem que descreva a alteração feita
+git commit -m "feat: descreva a alteração realizada"
+
+# Envie os commits para a branch principal
+git push origin main
+```
+
+### Trocar ou corrigir o repositório remoto
+
+Se o remoto `origin` já existe, mas aponta para a URL errada, atualize-o assim:
+
+```powershell
+git remote set-url origin https://github.com/SEU_USUARIO/nome-do-repositorio.git
+git remote -v
+git push -u origin main
+```
+
+Se ainda não existe um remoto chamado `origin`, use `git remote add origin` em vez de `git remote set-url`:
+
+```powershell
+git remote add origin https://github.com/SEU_USUARIO/nome-do-repositorio.git
+git push -u origin main
+```
+
+### Criar um repositório do zero
+
+1. No GitHub, crie um novo repositório vazio — sem README, `.gitignore` ou licença, pois o projeto já está no computador.
+2. No terminal, dentro da pasta do projeto, execute:
+
+```powershell
+cd "C:\Users\SeuUsuario\SeuLocal\nome-do-projeto"
+
+# Execute "git init" apenas se esta pasta ainda não for um repositório Git
+git init
+git branch -M main
+git add .
+git commit -m "chore: primeiro commit"
+git remote add origin https://github.com/SEU_USUARIO/nome-do-repositorio.git
+git push -u origin main
+```
+
+Se o Git solicitar identificação antes do primeiro commit, configure o nome e o e-mail usados nos commits:
+
+```powershell
+git config --global user.name "Seu Nome"
+git config --global user.email "seu-email@exemplo.com"
+```
+
+---
+
 ## Observação final
 
 Para que a aplicação funcione corretamente, o banco MySQL deve estar em execução no Docker e o ambiente Java deve estar configurado com JDK 17 antes da inicialização do backend.
