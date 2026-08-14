@@ -186,7 +186,7 @@ export default function LoginScreen() {
               <Text style={styles.linkText}>Esqueci minha senha</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => router.back()} style={styles.linkBtn}>
+            <TouchableOpacity onPress={() => router.replace('/')} style={styles.linkBtn}>
               <Ionicons name="arrow-back-outline" size={14} color={colors.textMuted} />
               <Text style={styles.linkText}>Voltar ao início</Text>
             </TouchableOpacity>

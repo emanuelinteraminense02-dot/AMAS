@@ -32,9 +32,9 @@ function calcEstado(ev: EventoComEstado, assocId: number): EstadoInscricao {
   if (status === 'Em Breve') return 'em_breve';
   const inscritos = ev.inscritos || [];
   const espera = ev.listaEspera || [];
-  const estaInscrito = inscritos.some((i) => i.id === assocId);
+  const estaInscrito = inscritos.some((i) => Number(i.id) === Number(assocId));
   if (estaInscrito) return 'inscrito';
-  const estaEspera = espera.some((i) => i.id === assocId);
+  const estaEspera = espera.some((i) => Number(i.id) === Number(assocId));
   if (estaEspera) return 'espera';
   const vagas = ev.vagasTotais || ev.vagas || 0;
   if (vagas > 0 && inscritos.length >= vagas) return 'lotado';
@@ -99,24 +99,16 @@ export function EventosSectionAssoc({ assocId }: EventosSectionAssocProps) {
   }
 
   async function cancelar(ev: EventoComEstado) {
-    Alert.alert('Cancelar inscrição', 'Deseja cancelar sua inscrição neste evento?', [
-      { text: 'Não', style: 'cancel' },
-      {
-        text: 'Sim, cancelar',
-        style: 'destructive',
-        onPress: async () => {
-          setProcessandoId(ev.id);
-          try {
-            await apiEventos.cancelarInscricao(ev.id, assocId);
-            await carregar();
-          } catch (e) {
-            Alert.alert('Erro', e instanceof Error ? e.message : 'Não foi possível cancelar.');
-          } finally {
-            setProcessandoId(null);
-          }
-        },
-      },
-    ]);
+    setProcessandoId(ev.id);
+    try {
+      await apiEventos.cancelarInscricao(ev.id, Number(assocId));
+      await carregar();
+      Alert.alert('Sucesso', 'Inscrição cancelada com sucesso.');
+    } catch (e) {
+      Alert.alert('Erro', e instanceof Error ? e.message : 'Não foi possível cancelar.');
+    } finally {
+      setProcessandoId(null);
+    }
   }
 
   const disponiveis = useMemo(() => {
@@ -291,8 +283,8 @@ function EventoCard({ ev, assocId, processando, onVer, onInscrever, onCancelar }
           </TouchableOpacity>
         )}
         {(estado === 'inscrito' || estado === 'espera') && (
-          <TouchableOpacity onPress={onCancelar} style={[styles.actionBtn, styles.actionBtnOutline]}>
-            <Text style={styles.actionBtnTextDanger}>{estado === 'espera' ? 'Sair da fila' : 'Cancelar'}</Text>
+          <TouchableOpacity onPress={onCancelar} disabled={processando} style={[styles.actionBtn, styles.actionBtnOutline, processando && styles.actionBtnDisabled]}>
+            <Text style={styles.actionBtnTextDanger}>{processando ? '...' : estado === 'espera' ? 'Sair da fila' : 'Cancelar'}</Text>
           </TouchableOpacity>
         )}
         {estado === 'em_breve' && (
@@ -403,6 +395,7 @@ const styles = StyleSheet.create({
   actionBtnPrimary: { backgroundColor: colors.azulDeep },
   actionBtnWarning: { backgroundColor: colors.warning },
   actionBtnOutline: { borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' },
+  actionBtnDisabled: { opacity: 0.55 },
   actionBtnTextWhite: { fontSize: 12.5, fontWeight: '700', color: colors.white },
   actionBtnTextDanger: { fontSize: 12.5, fontWeight: '700', color: colors.danger },
   verBtn: { marginTop: spacing.md, alignItems: 'center' },
