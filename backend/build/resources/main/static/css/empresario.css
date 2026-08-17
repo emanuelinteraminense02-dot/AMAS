@@ -1,0 +1,466 @@
+/* =====================================================
+   EMPRESARIO.CSS v4.1 — Layout Sidebar + Componentes
+   Limpo, sem conflitos, sem regras duplicadas
+===================================================== */
+
+/* ══════════════════════════════════════════════════
+   1. LAYOUT BASE — body + sidebar + main
+══════════════════════════════════════════════════ */
+
+/*
+  .emp-body usa a mesma estrutura sidebar/main do painel.css.
+  A sidebar já é estilizada por painel.css (posição fixed, 260px, azul).
+  Aqui só precisamos garantir que o body seja flex e o main tenha o offset correto.
+*/
+.emp-body {
+  display: flex;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.emp-body .painel-main {
+  margin-left: var(--sidebar-width);
+  flex: 1;
+  min-width: 0;           /* evita overflow em flexbox */
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  gap: 1rem;
+  padding: 1.5rem clamp(1rem, 2vw, 1.75rem) 3.75rem;
+}
+
+/* ══════════════════════════════════════════════════
+   2. CONSULTA DE ASSOCIADO
+══════════════════════════════════════════════════ */
+
+.emp-search-card {
+  text-align: center;
+  padding: clamp(1.25rem, 4vw, 2.5rem);
+  margin-bottom: 20px;
+}
+.emp-search-card h2 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+.emp-search-card p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
+.esc-icon   { font-size: 2.5rem; margin-bottom: 12px; }
+.esc-form   { max-width: 30rem; margin: 0 auto; width: 100%; }
+.cpf-input-wrap { display: flex; gap: 10px; }
+.esc-input  { flex: 1; font-size: 1rem; }
+.esc-btn    { white-space: nowrap; }
+
+/* Resultado da consulta */
+.emp-resultado {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+  margin-bottom: 20px;
+  animation: fadeUp 0.3s ease;
+}
+.res-header {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.res-header.liberado   { background: rgba(34,197,94,0.06);  border-bottom: 1px solid rgba(34,197,94,0.2); }
+.res-header.bloqueado  { background: rgba(239,68,68,0.06);  border-bottom: 1px solid rgba(239,68,68,0.2); }
+.res-header.indefinido { background: var(--surface);        border-bottom: 1px solid var(--border); }
+.res-big-icon { font-size: 2.4rem; }
+.res-titulo   { font-family: var(--font-display); font-size: 1.15rem; font-weight: 800; }
+.res-sub      { font-size: 0.82rem; color: var(--text-muted); margin-top: 2px; }
+.res-body     { padding: 16px 24px; }
+.res-rows     { display: flex; flex-direction: column; }
+.res-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+.res-row:last-child { border-bottom: none; }
+.res-row-label { color: var(--text-muted); font-size: 0.8rem; font-weight: 500; }
+.res-row-value { font-weight: 600; color: var(--text-primary); }
+
+.beneficio-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.beneficio-tag.sim { background: rgba(34,197,94,0.1);  color: #16a34a; }
+.beneficio-tag.nao { background: rgba(239,68,68,0.1);  color: #dc2626; }
+
+/* ══════════════════════════════════════════════════
+   3. HISTÓRICO DE CONSULTAS
+══════════════════════════════════════════════════ */
+
+.hist-list  { display: flex; flex-direction: column; }
+.hist-empty { color: var(--text-muted); font-size: 0.88rem; padding: 16px 0; }
+.hist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.hist-item:last-child { border-bottom: none; }
+.hist-item-nome { font-weight: 600; font-size: 0.88rem; }
+.hist-item-cpf  { font-size: 0.78rem; color: var(--text-muted); font-family: monospace; }
+.hist-item-hora { font-size: 0.75rem; color: var(--text-muted); margin-left: auto; }
+
+/* ══════════════════════════════════════════════════
+   4. DASHBOARD FINANCEIRO
+══════════════════════════════════════════════════ */
+
+.dash-fin-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.dash-fin-card { text-align: center; padding: 24px 16px; }
+.dfc-icon  { font-size: 2rem; margin-bottom: 8px; }
+.dfc-label { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 6px; line-height: 1.3; }
+.dfc-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-family: var(--font-display);
+  color: var(--text-primary);
+  word-break: break-word;
+}
+.dfc-value.green { color: var(--status-regular); }
+.dfc-value.blue  { color: var(--azul-mid); }
+
+/* Lista de transações */
+.tx-table   { display: flex; flex-direction: column; }
+.tx-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.tx-row:last-child { border-bottom: none; }
+.tx-mes    { flex: 1; font-weight: 600; font-size: 0.88rem; min-width: min(100%, 7.5rem); }
+.tx-bruto  { font-size: 0.82rem; color: var(--text-muted); }
+.tx-liq    { font-size: 0.85rem; font-weight: 600; }
+.tx-liq.green { color: var(--status-regular); }
+.tx-contrib { font-size: 0.8rem; }
+
+/* ══════════════════════════════════════════════════
+   5. CARD DE CONTRIBUIÇÃO AMAS
+══════════════════════════════════════════════════ */
+
+.contrib-calc-card {
+  margin-top: 20px;
+  border-left: 4px solid var(--azul-mid);
+}
+.contrib-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.contrib-sub { font-size: 0.84rem; color: var(--text-muted); margin-top: 4px; }
+
+.contrib-valor-destaque {
+  text-align: center;
+  flex-shrink: 0;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 12px 20px;
+  min-width: 140px;
+}
+.cv-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.cv-num {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+}
+
+/* Barra de faixas */
+.contrib-faixa-bar { margin-bottom: 16px; }
+.cfb-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.cfb-track {
+  position: relative;
+  height: 10px;
+  background: var(--surface);
+  border-radius: 5px;
+  overflow: visible;
+}
+.cfb-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.5s ease;
+}
+.cfb-marker {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 18px;
+  background: var(--border);
+  transform: translateX(-50%);
+}
+.cfb-legenda {
+  display: flex;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 5px;
+}
+
+/* Detalhes do cálculo */
+.contrib-det-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.contrib-det-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.contrib-det-row:nth-child(even) { background: rgba(207,148,29,0.03); }
+.cdr-label { color: var(--text-muted); }
+.cdr-val   { font-weight: 600; }
+
+/* Ações */
+.contrib-acoes { margin-top: 4px; }
+.contrib-isento-msg {
+  background: rgba(34,197,94,0.08);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 0.85rem;
+  color: #16a34a;
+  font-weight: 600;
+}
+.contrib-registrado {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+/* ══════════════════════════════════════════════════
+   6. MINHA PARCERIA — Banner de Contrato
+══════════════════════════════════════════════════ */
+
+.contrato-banner { margin-bottom: 20px; }
+.contrato-banner-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px 20px;
+  flex-wrap: wrap;
+}
+.contrato-banner-inner.acordo-ativo {
+  background: rgba(34,197,94,0.04);
+  border-color: rgba(34,197,94,0.25);
+  border-left: 4px solid var(--status-regular);
+}
+.cb-icon     { font-size: 1.8rem; flex-shrink: 0; }
+.cb-info     { flex: 1; min-width: 160px; }
+.cb-titulo   { font-weight: 600; font-size: 0.92rem; }
+.cb-obs      { font-size: 0.78rem; color: var(--text-muted); margin-top: 3px; font-style: italic; }
+.cb-vigencia { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+.cb-aliquota {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--azul-mid);
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════
+   7. MINHA PARCERIA — Grid e Impacto
+══════════════════════════════════════════════════ */
+
+.parceria-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.impacto-kpis {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.impacto-kpi {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  text-align: center;
+}
+.ik-icon  { font-size: 1.5rem; margin-bottom: 6px; }
+.ik-val   { font-family: var(--font-display); font-size: 1.1rem; font-weight: 800; margin-bottom: 2px; }
+.ik-label { font-size: 0.72rem; color: var(--text-muted); line-height: 1.3; }
+
+.impacto-msg {
+  background: rgba(207,148,29,0.05);
+  border: 1px solid rgba(207,148,29,0.15);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* ══════════════════════════════════════════════════
+   8. EXTRATO / MODAL INFO
+══════════════════════════════════════════════════ */
+
+.extrato-table { overflow-x: auto; }
+
+.contrib-info-modal {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-bottom: 4px;
+}
+.contrib-info-mini { display: flex; flex-direction: column; }
+.contrib-info-mini > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.contrib-info-mini > div:last-child { border-bottom: none; }
+.cim-label { color: var(--text-muted); font-size: 0.8rem; }
+.cim-val   { font-weight: 600; }
+
+/* ══════════════════════════════════════════════════
+   9. UNIDADES
+══════════════════════════════════════════════════ */
+
+.unidade-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.unidade-item:last-child { border-bottom: none; }
+.uni-info { flex: 1; min-width: 0; }
+.uni-nome { font-weight: 600; font-size: 0.92rem; margin-bottom: 2px; }
+.uni-end  { font-size: 0.82rem; color: var(--text-muted); }
+.uni-acoes { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ══════════════════════════════════════════════════
+   10. RESPONSIVO
+══════════════════════════════════════════════════ */
+
+@media (max-width: 68.75rem) {
+  .dash-fin-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 56.25rem) {
+  .parceria-grid    { grid-template-columns: 1fr; }
+  .contrib-det-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 48rem) {
+  /* Sidebar esconde, main ocupa tudo */
+  .emp-body .painel-main { margin-left: 0; }
+  .dash-fin-grid { grid-template-columns: 1fr; }
+  .impacto-kpis  { grid-template-columns: 1fr; }
+  .contrato-banner-inner { gap: 12px; }
+  .cb-aliquota { font-size: 1.5rem; }
+  .cpf-input-wrap,
+  .contrib-header,
+  .res-header,
+  .res-body,
+  .contrib-registrado,
+  .cb-row {
+    max-width: 100%;
+  }
+  .res-row,
+  .tx-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 31.25rem) {
+  .dash-fin-grid { grid-template-columns: 1fr; }
+  .impacto-kpis  { grid-template-columns: 1fr; }
+  .cpf-input-wrap { flex-direction: column; }
+  .emp-search-card { padding: 24px 16px; }
+  .res-header, .res-body { padding: 14px 16px; }
+  .contrib-valor-destaque,
+  .cb-info {
+    min-width: 0;
+    width: 100%;
+  }
+  .uni-acoes,
+  .contrib-acoes {
+    width: 100%;
+    flex-direction: column;
+  }
+}
+
+/* ── Bootstrap Icons for empresario panel ──────── */
+.esc-icon i { font-size: 2.2rem; color: var(--azul-mid); margin-bottom: 8px; }
+.nav-icon i { font-size: 1.05rem; }
+.beneficio-tag i { font-size: 0.8rem; margin-right: 2px; }
+.cb-icon i { font-size: 1.4rem; }
+.form-label i.bi-question-circle {
+  cursor: help;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+}
+.form-label i.bi-question-circle:hover { opacity: 1; }
+.form-label i.bi-tag-fill { opacity: 0.75; }
+.imp-icon i { font-size: 1.6rem; }
