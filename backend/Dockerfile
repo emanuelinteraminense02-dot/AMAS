@@ -1,13 +1,11 @@
 # ---------- ETAPA 1: build ----------
-FROM gradle:jdk17 AS build
+FROM gradle:8.7-jdk17 AS build
 
 WORKDIR /app
 
 COPY backend/build.gradle ./build.gradle
 COPY backend/settings.gradle* ./
 COPY backend/src ./src
-
-# Frontend Web HTML/CSS/JS
 COPY frontend ./frontend
 
 RUN gradle clean bootJar -x test --no-daemon
