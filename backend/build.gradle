@@ -17,7 +17,7 @@ repositories {
 	mavenCentral()
 }
 
-def frontendDir = layout.projectDirectory.dir("../frontend")
+def frontendDir = layout.projectDirectory.dir("frontend")
 def generatedFrontendDir = layout.buildDirectory.dir("generated/frontend-static")
 
 dependencies {
@@ -25,11 +25,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 
-	// Banco de dados – MySQL (produção)
-	runtimeOnly 'com.mysql:mysql-connector-j'
-
-	// H2 in-memory (opcional — descomente se quiser rodar sem MySQL)
-	// runtimeOnly 'com.h2database:h2'
+	// Banco de dados – PostgreSQL / Supabase
+	runtimeOnly 'org.postgresql:postgresql'
 
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
