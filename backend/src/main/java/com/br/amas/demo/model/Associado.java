@@ -58,7 +58,7 @@ public class Associado {
 
     /** * Base64 da foto de perfil
      */
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "TEXT")
     private String foto;
 
     private LocalDateTime dataResetSolicit;
