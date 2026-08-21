@@ -1,6 +1,6 @@
 window.AMAS_CONFIG = Object.assign(
     {
-        apiBase: "http://localhost:8080/api"
+        apiBase: "https://amas-5z8r.onrender.com/api"
     },
     window.AMAS_CONFIG || {}
 );

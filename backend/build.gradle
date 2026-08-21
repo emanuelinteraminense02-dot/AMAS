@@ -25,7 +25,10 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 
-	// Banco de dados – PostgreSQL / Supabase
+	// Bancos de dados
+	// Local = MySQL
+	// Render = PostgreSQL / Supabase
+	runtimeOnly 'com.mysql:mysql-connector-j'
 	runtimeOnly 'org.postgresql:postgresql'
 
 	// Lombok
