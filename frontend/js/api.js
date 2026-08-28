@@ -87,10 +87,84 @@ const apiDelete = (path)        => apiRequest("DELETE", path, undefined, true);
 
 /* ─── Auth ────────────────────────────────────────────────────────── */
 const apiAuth = {
-    login: (email, senha) => apiPost("/auth/login", { email, senha }),
-    alterarSenha: (id, senhaAtual, novaSenha) =>
-        apiPatch(`/auth/associados/${id}/senha`, { senhaAtual, novaSenha })
+
+    login: function (email, senha) {
+        return apiPost(
+            "/auth/login",
+            {
+                email: email,
+                senha: senha
+            }
+        );
+    },
+
+    alterarSenha: function (
+        id,
+        senhaAtual,
+        novaSenha
+    ) {
+
+        return apiPatch(
+            `/auth/associados/${id}/senha`,
+            {
+                senhaAtual: senhaAtual,
+                novaSenha: novaSenha
+            }
+        );
+    }
 };
+
+
+/*
+ * ============================================================
+ * AUTENTICAÇÃO
+ * ============================================================
+ */
+
+function autenticar(email, senha) {
+
+    return apiAuth.login(
+        email,
+        senha
+    );
+}
+
+
+/*
+ * ============================================================
+ * ALTERAR SENHA
+ * ============================================================
+ */
+
+function definirNovaSenha(
+    id,
+    colecao,
+    novaSenha) {
+
+    /*
+     * O backend atual possui endpoint específico
+     * para associados.
+     */
+
+    if (colecao !== "associados") {
+
+        return Promise.resolve({
+            ok: false,
+            erro: "A alteração de senha para este perfil ainda não está disponível."
+        });
+    }
+
+    /*
+     * Na redefinição obrigatória não precisamos
+     * enviar a senha atual.
+     */
+
+    return apiAuth.alterarSenha(
+        id,
+        null,
+        novaSenha
+    );
+}
 
 /* ─── Log ─────────────────────────────────────────────────────────── */
 const apiLog = {

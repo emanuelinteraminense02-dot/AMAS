@@ -8,9 +8,88 @@
 ===================================================================== */
 
 /* ─── Sessão (mantida em localStorage — leve, não sensível) ─────── */
-function getSessao()   { return JSON.parse(localStorage.getItem("amas_sessao")) || null; }
-function setSessao(u)  { localStorage.setItem("amas_sessao", JSON.stringify(u)); }
-function clearSessao() { localStorage.removeItem("amas_sessao"); }
+/* ─────────────────────────────────────────────────────────────
+   SESSÃO DO USUÁRIO
+   ─────────────────────────────────────────────────────────────
+
+   O backend NÃO envia a senha no resultado do login.
+
+   O objeto retornado pelo backend é salvo em:
+   localStorage["amas_sessao"]
+
+   Exemplo:
+
+   {
+       "id": 1,
+       "nome": "Administrador AMAS",
+       "email": "admin@amas.com",
+       "perfil": "admin",
+       "primeiroLogin": false,
+       "resetSolicitado": false,
+       "senhaExpirada": false
+   }
+
+   ─────────────────────────────────────────────────────────────
+*/
+
+function getSessao() {
+
+  try {
+
+    var dados =
+        localStorage.getItem("amas_sessao");
+
+    if (!dados) {
+      return null;
+    }
+
+    return JSON.parse(dados);
+
+  } catch (erro) {
+
+    console.error(
+        "Erro ao recuperar sessão:",
+        erro
+    );
+
+    localStorage.removeItem("amas_sessao");
+
+    return null;
+  }
+}
+
+
+function setSessao(usuario) {
+
+  if (!usuario) {
+    return;
+  }
+
+  /*
+   * Segurança adicional:
+   *
+   * Mesmo que algum endpoint futuramente devolva
+   * uma propriedade senha por engano, ela não será
+   * armazenada na sessão.
+   */
+  var sessao = Object.assign({}, usuario);
+
+  delete sessao.senha;
+  delete sessao.password;
+
+  localStorage.setItem(
+      "amas_sessao",
+      JSON.stringify(sessao)
+  );
+}
+
+
+function clearSessao() {
+
+  localStorage.removeItem(
+      "amas_sessao"
+  );
+}
 
 /* ─── Inicialização ─────────────────────────────────────────────── */
 function inicializarBanco() { /* dados gerenciados pelo back-end */ }
