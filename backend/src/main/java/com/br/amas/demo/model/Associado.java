@@ -2,6 +2,7 @@ package com.br.amas.demo.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -46,8 +47,6 @@ public class Associado {
     @Builder.Default
     private Boolean senhaExpirada = false;
 
-    /** * Status possíveis: Regular | Inadimplente | Em análise
-     */
     @Builder.Default
     private String status = "Em análise";
 
@@ -56,8 +55,6 @@ public class Associado {
 
     private LocalDate dataEntrada;
 
-    /** * Base64 da foto de perfil
-     */
     @Column(columnDefinition = "TEXT")
     private String foto;
 

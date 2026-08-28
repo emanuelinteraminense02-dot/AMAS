@@ -26,8 +26,6 @@ public class Usuario {
     @Column(nullable = false)
     private String senha;
 
-    /** * Perfil do usuário: admin | empresario
-     */
     @Column(nullable = false)
     private String perfil;
 
@@ -40,19 +38,13 @@ public class Usuario {
     @Builder.Default
     private Boolean senhaExpirada = false;
 
-    // ── Campos exclusivos do perfil "empresario" ─────────────
-
     private String cnpj;
 
     private String telefone;
 
-    /** * JSON serializado das unidades da empresa
-     */
     @Column(columnDefinition = "TEXT")
     private String unidades;
 
-    /** * JSON serializado do contrato
-     */
     @Column(columnDefinition = "TEXT")
     private String contrato;
 

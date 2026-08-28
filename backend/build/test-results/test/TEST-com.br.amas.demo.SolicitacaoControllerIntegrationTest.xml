@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.br.amas.demo.SolicitacaoControllerIntegrationTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-08-28T17:50:36" hostname="L05001-033749" time="0.087">
+  <properties/>
+  <testcase name="criarSolicitacaoDeEmpresaPersisteCpfComoNulo()" classname="com.br.amas.demo.SolicitacaoControllerIntegrationTest" time="0.087"/>
+  <system-out><![CDATA[2026-08-28T14:50:36.072-03:00  INFO 92896 --- [amas-test] [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.br.amas.demo.SolicitacaoControllerIntegrationTest]: SolicitacaoControllerIntegrationTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-08-28T14:50:36.074-03:00  INFO 92896 --- [amas-test] [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.br.amas.demo.DemoApplication for test class com.br.amas.demo.SolicitacaoControllerIntegrationTest
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

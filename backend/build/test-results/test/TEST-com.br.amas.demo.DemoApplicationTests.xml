@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.br.amas.demo.DemoApplicationTests" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-08-28T17:50:34" hostname="L05001-033749" time="0.51">
+  <properties/>
+  <testcase name="contextLoads()" classname="com.br.amas.demo.DemoApplicationTests" time="0.51"/>
+  <system-out><![CDATA[14:50:30.537 [Test worker] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.br.amas.demo.DemoApplicationTests]: DemoApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+14:50:30.630 [Test worker] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.br.amas.demo.DemoApplication for test class com.br.amas.demo.DemoApplicationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+ :: Spring Boot ::                (v3.2.5)
+
+2026-08-28T14:50:30.932-03:00  INFO 92896 --- [amas-test] [    Test worker] com.br.amas.demo.DemoApplicationTests    : Starting DemoApplicationTests using Java 17.0.20 with PID 92896 (started by emanuel58152706 in C:\Users\Emanuel58152706\Downloads\sistema-amas-main (2) 1\sistema-amas-main\backend)
+2026-08-28T14:50:30.933-03:00  INFO 92896 --- [amas-test] [    Test worker] com.br.amas.demo.DemoApplicationTests    : No active profile set, falling back to 1 default profile: "default"
+2026-08-28T14:50:31.495-03:00  INFO 92896 --- [amas-test] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-08-28T14:50:31.582-03:00  INFO 92896 --- [amas-test] [    Test worker] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 80 ms. Found 13 JPA repository interfaces.
+2026-08-28T14:50:31.968-03:00  INFO 92896 --- [amas-test] [    Test worker] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-08-28T14:50:32.051-03:00  INFO 92896 --- [amas-test] [    Test worker] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-08-28T14:50:32.082-03:00  INFO 92896 --- [amas-test] [    Test worker] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-08-28T14:50:32.277-03:00  INFO 92896 --- [amas-test] [    Test worker] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-08-28T14:50:32.298-03:00  INFO 92896 --- [amas-test] [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-08-28T14:50:32.443-03:00  INFO 92896 --- [amas-test] [    Test worker] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection conn0: url=jdbc:h2:mem:amas_db user=SA
+2026-08-28T14:50:32.444-03:00  INFO 92896 --- [amas-test] [    Test worker] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-08-28T14:50:32.466-03:00  WARN 92896 --- [amas-test] [    Test worker] org.hibernate.orm.deprecation            : HHH90000025: H2Dialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-08-28T14:50:33.225-03:00  INFO 92896 --- [amas-test] [    Test worker] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-08-28T14:50:33.286-03:00  INFO 92896 --- [amas-test] [    Test worker] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-08-28T14:50:33.914-03:00  WARN 92896 --- [amas-test] [    Test worker] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: 35c5f40f-6473-4135-a27f-340f52291e6c
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-08-28T14:50:34.325-03:00  INFO 92896 --- [amas-test] [    Test worker] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@174e5929, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@7569bc9f, org.springframework.security.web.context.SecurityContextHolderFilter@4b0df349, org.springframework.security.web.header.HeaderWriterFilter@6441da2c, org.springframework.web.filter.CorsFilter@62b8dd6a, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@48463900, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@5834298c, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@758e6acd, org.springframework.security.web.access.ExceptionTranslationFilter@57fe6f2d, org.springframework.security.web.access.intercept.AuthorizationFilter@50165a6d]
+2026-08-28T14:50:34.684-03:00  INFO 92896 --- [amas-test] [    Test worker] com.br.amas.demo.DemoApplicationTests    : Started DemoApplicationTests in 3.924 seconds (process running for 5.126)
+2026-08-28T14:50:34.695-03:00  INFO 92896 --- [amas-test] [    Test worker] com.br.amas.demo.config.DataLoader       : DataLoader: carga de dados de demonstração desativada.
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

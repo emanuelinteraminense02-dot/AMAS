@@ -1,163 +1,166 @@
 package com.br.amas.demo.service;
 
 import com.br.amas.demo.model.Associado;
-
 import com.br.amas.demo.model.Usuario;
-
 import com.br.amas.demo.repository.AssociadoRepository;
-
 import com.br.amas.demo.repository.UsuarioRepository;
-
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
-
 import java.util.Map;
-
 import java.util.Optional;
 
 @Service
-
 @RequiredArgsConstructor
-
 public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
-
     private final AssociadoRepository associadoRepository;
-
     private final LogService logService;
-
     private final EmpresarioPayloadMapper empresarioPayloadMapper;
 
     /**
-
-     * Autentica qualquer perfil (admin, empresario, associado).
-
-     * Retorna um mapa com os dados do usuário + campo "perfil".
-
+     * Autentica admin, empresário ou associado.
      */
-
     public Map<String, Object> autenticar(String email, String senha) {
+
+        if (email == null || senha == null) {
+            throw new RuntimeException("E-mail e senha são obrigatórios.");
+        }
 
         String emailNorm = email.trim().toLowerCase();
 
-        // Verifica admin / empresario primeiro
+        // =========================================================
+        // ADMIN / EMPRESÁRIO
+        // =========================================================
 
         Optional<Usuario> usuOpt = usuarioRepository.findByEmail(emailNorm);
 
-        if (usuOpt.isPresent() && usuOpt.get().getSenha().equals(senha)) {
+        if (usuOpt.isPresent()) {
 
             Usuario u = usuOpt.get();
 
-            logService.registrar("Login realizado", u.getNome(), u.getPerfil(),
+            if (u.getSenha().equals(senha)) {
 
-                    "Acesso ao painel de " + u.getPerfil());
+                logService.registrar(
+                        "Login realizado",
+                        u.getNome(),
+                        u.getPerfil(),
+                        "Acesso ao painel de " + u.getPerfil()
+                );
 
-            return usuarioParaMap(u);
-
+                return usuarioParaMap(u);
+            }
         }
 
-        // Verifica associado
+        // =========================================================
+        // ASSOCIADO
+        // =========================================================
 
-        Optional<Associado> assocOpt = associadoRepository.findByEmail(emailNorm);
+        Optional<Associado> assocOpt =
+                associadoRepository.findByEmail(emailNorm);
 
-        if (assocOpt.isPresent() && assocOpt.get().getSenha().equals(senha)) {
+        if (assocOpt.isPresent()) {
 
             Associado a = assocOpt.get();
 
-            logService.registrar("Login realizado", a.getNome(), "associado",
+            if (a.getSenha().equals(senha)) {
 
-                    "Acesso ao painel do associado");
+                logService.registrar(
+                        "Login realizado",
+                        a.getNome(),
+                        "associado",
+                        "Acesso ao painel do associado"
+                );
 
-            return associadoParaMap(a);
-
+                return associadoParaMap(a);
+            }
         }
 
         throw new RuntimeException("Credenciais inválidas.");
-
     }
 
     /**
      * Altera a senha do associado.
-     * Quando senhaAtual é null (redefinição obrigatória no primeiro login),
-     * a verificação da senha atual é ignorada.
+     *
+     * Se senhaAtual for null ou vazia, permite redefinição
+     * obrigatória no primeiro login.
      */
-    public void alterarSenha(Long associadoId, String senhaAtual, String novaSenha) {
+    public void alterarSenha(
+            Long associadoId,
+            String senhaAtual,
+            String novaSenha
+    ) {
+
+        if (novaSenha == null || novaSenha.isBlank()) {
+            throw new RuntimeException("A nova senha é obrigatória.");
+        }
 
         Associado a = associadoRepository.findById(associadoId)
+                .orElseThrow(() ->
+                        new RuntimeException("Associado não encontrado.")
+                );
 
-                .orElseThrow(() -> new RuntimeException("Associado não encontrado."));
-
-        if (senhaAtual != null && !a.getSenha().equals(senhaAtual)) {
+        /*
+         * Quando senhaAtual não foi enviada, trata como redefinição
+         * obrigatória.
+         */
+        if (senhaAtual != null
+                && !senhaAtual.isBlank()
+                && !a.getSenha().equals(senhaAtual)) {
 
             throw new RuntimeException("Senha atual incorreta.");
-
         }
 
         a.setSenha(novaSenha);
-
         a.setPrimeiroLogin(false);
-
         a.setSenhaExpirada(false);
-
         a.setResetSolicitado(false);
-
         a.setDataResetSolicit(null);
 
         associadoRepository.save(a);
-
     }
 
-    // ── helpers ──────────────────────────────────────────────
+    // =============================================================
+    // CONVERSÃO DE USUÁRIO
+    // =============================================================
 
     private Map<String, Object> usuarioParaMap(Usuario u) {
-        return new HashMap<>(empresarioPayloadMapper.toResponse(u));
 
+        return new HashMap<>(
+                empresarioPayloadMapper.toResponse(u)
+        );
     }
+
+    // =============================================================
+    // CONVERSÃO DE ASSOCIADO
+    // =============================================================
 
     private Map<String, Object> associadoParaMap(Associado a) {
 
         Map<String, Object> m = new HashMap<>();
 
         m.put("id", a.getId());
-
         m.put("nome", a.getNome());
-
         m.put("email", a.getEmail());
-
         m.put("cpf", a.getCpf());
-
         m.put("perfil", "associado");
-
         m.put("status", a.getStatus());
-
         m.put("matricula", a.getMatricula());
 
         m.put("primeiroLogin", a.getPrimeiroLogin());
-
         m.put("resetSolicitado", a.getResetSolicitado());
-
         m.put("senhaExpirada", a.getSenhaExpirada());
-
         m.put("dataResetSolicit", a.getDataResetSolicit());
 
         m.put("foto", a.getFoto());
-
         m.put("telefone", a.getTelefone());
-
         m.put("endereco", a.getEndereco());
-
         m.put("profissao", a.getProfissao());
-
         m.put("nascimento", a.getNascimento());
-
         m.put("dataEntrada", a.getDataEntrada());
 
         return m;
-
     }
-
 }

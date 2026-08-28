@@ -47,13 +47,7 @@ public class DataLoader implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        repararDadosExistentes();
-        seedUsuarios();
-        seedAssociados();
-        seedConteudoInstitucional();
-        seedSolicitacoes();
-        seedLogInicial();
-        log.info("DataLoader: revisão e complementação do banco concluídas.");
+        log.info("DataLoader: carga de dados de demonstração desativada.");
     }
 
     private void repararDadosExistentes() {
