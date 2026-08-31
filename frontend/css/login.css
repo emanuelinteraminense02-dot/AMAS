@@ -38,55 +38,126 @@
 }
 .login-hero-text {
   margin-top: auto;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
+}
+.login-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(232, 168, 42, 0.15);
+  border: 1px solid rgba(232, 168, 42, 0.35);
+  border-radius: 9999px;
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #f6c86a;
+  letter-spacing: 0.03em;
+  margin-bottom: 16px;
+  backdrop-filter: blur(8px);
+}
+.login-badge-pill i {
+  font-size: 0.95rem;
+  color: #e8a82a;
 }
 .login-hero-text h1 {
   font-family: var(--font-display);
-  font-size: clamp(2.25rem, 4.5vw, 3rem);
+  font-size: clamp(2rem, 3.8vw, 2.75rem);
   font-weight: 800;
   color: #fff;
-  line-height: 1.1;
+  line-height: 1.15;
   letter-spacing: -0.02em;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 .login-hero-text p {
-  color: rgba(255,255,255,0.72);
-  font-size: 1rem;
-  line-height: 1.65;
-  max-width: 21.25rem;
+  color: rgba(255,255,255,0.78);
+  font-size: 0.95rem;
+  line-height: 1.6;
+  max-width: 26rem;
 }
 
-.profiles-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: rgba(255,255,255,0.5);
-  margin-bottom: 12px;
+/* Destaques Institucionais (substitui os perfis de login) */
+.login-features {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 28px;
 }
-.profile-pills { display: flex; flex-direction: column; gap: 8px; }
-.pill {
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.12);
+.feature-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: var(--radius-md);
-  padding: 12px 16px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  backdrop-filter: blur(12px);
+  transition: all 0.25s ease;
+}
+.feature-card:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(232, 168, 42, 0.35);
+  transform: translateY(-2px);
+}
+.feature-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(232, 168, 42, 0.25), rgba(207, 148, 29, 0.12));
+  border: 1px solid rgba(232, 168, 42, 0.3);
   display: flex;
   align-items: center;
-  gap: 12px;
-  font-size: 0.85rem;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #f6c86a;
+  font-size: 1.2rem;
 }
-.pill span { font-size: 1.2rem; }
-.pill strong { display: block; color: #fff; font-weight: 600; }
-.pill small { color: rgba(255,255,255,0.55); font-size: 0.78rem; }
+.feature-info {
+  flex: 1;
+}
+.feature-info strong {
+  display: block;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 0.92rem;
+  margin-bottom: 3px;
+}
+.feature-info p {
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin: 0;
+}
 
+/* Rodapé do Painel Esquerdo */
+.login-left-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
 .back-link {
-  display: inline-block;
-  color: rgba(255,255,255,0.55);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(255,255,255,0.7);
   font-size: 0.85rem;
-  margin-top: 24px;
+  font-weight: 500;
+  text-decoration: none;
   transition: var(--transition);
 }
-.back-link:hover { color: #fff; }
+.back-link:hover {
+  color: #fff;
+  transform: translateX(-3px);
+}
+.login-help-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.55);
+}
 
 /* Painel direito */
 .login-right {
