@@ -1181,10 +1181,17 @@ async function renderContratos() {
       const hist    = c.historicoDocumentos || [];
       const vigencia= c.dataVigencia ? formatDate(c.dataVigencia) : "Indefinida";
       const tipoIcon = tipo === "Parceiro Estratégico" ? '<i class="bi bi-star-fill"></i>' : tipo === "Apoio Institucional" ? '<i class="bi bi-building-check"></i>' : '<i class="bi bi-tag-fill"></i>';
+      const logo = emp.logo || emp.foto;
+      const logoHtml = logo
+        ? '<img src="' + logo + '" alt="' + emp.nome + '" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid rgba(207,148,29,0.35);box-shadow:0 1px 4px rgba(0,0,0,0.1);">'
+        : '<span style="width:40px;height:40px;border-radius:50%;background:rgba(35,40,80,0.08);color:#232850;display:inline-flex;align-items:center;justify-content:center;font-size:1.25rem;flex-shrink:0;"><i class="bi bi-building"></i></span>';
 
       return '<div class="contrato-card">' +
           '<div class="contrato-card-header">' +
-          '<div class="cc-emp-info"><div class="cc-emp-nome"><i class="bi bi-building"></i> ' + emp.nome + '</div><div class="cc-emp-cnpj">' + (emp.cnpj||"—") + ' · ' + (emp.email||"") + '</div></div>' +
+          '<div class="cc-emp-info" style="display:flex;align-items:center;gap:12px;">' +
+          logoHtml +
+          '<div><div class="cc-emp-nome">' + emp.nome + '</div><div class="cc-emp-cnpj">' + (emp.cnpj||"—") + ' · ' + (emp.email||"") + '</div></div>' +
+          '</div>' +
           '<div class="cc-parceria-badge"><span class="cpb-tipo">' + tipoIcon + ' ' + tipo + '</span><span class="cpb-validado ' + (validado?"ok":"pend") + '">' + (validado?'<i class="bi bi-check-circle-fill" style="color:#16a34a;"></i> Validado':'<i class="bi bi-hourglass-split" style="color:#d97706;"></i> Pendente') + '</span></div>' +
           '</div>' +
           '<div class="cc-beneficio-destaque"><span class="cbd-label"><i class="bi bi-tag"></i> Benefício ofertado</span><span class="cbd-valor">' + (benef||'<em style="opacity:.5;"><i class="bi bi-dash-circle"></i> Não definido</em>') + '</span></div>' +
@@ -1221,7 +1228,11 @@ window.abrirModalContrato = async function(empId) {
     if (!emp) return;
     _empCache = emps;
     const c = emp.contrato || {};
-    document.getElementById("modalContratoTitulo").textContent = "Parceria — " + emp.nome;
+    const logo = emp.logo || emp.foto;
+    const logoImg = logo
+      ? '<img src="' + logo + '" alt="' + emp.nome + '" style="width:28px;height:28px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px;display:inline-block;">'
+      : '<i class="bi bi-handshake" style="margin-right:6px;"></i>';
+    document.getElementById("modalContratoTitulo").innerHTML = logoImg + "Parceria — " + emp.nome;
     document.getElementById("modalContratoNome").textContent   = (emp.cnpj||"") + " · " + (emp.email||"");
     document.getElementById("ctBeneficioOfertado").value = c.beneficioOfertado  || "";
     document.getElementById("ctRegras").value            = c.regrasUtilizacao   || "";

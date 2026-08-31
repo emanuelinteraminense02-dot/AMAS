@@ -45,6 +45,9 @@ public class EmpresarioPayloadMapper {
         resp.put("senhaExpirada", usuario.getSenhaExpirada());
         resp.put("dataResetSolicit", usuario.getDataResetSolicit());
 
+        resp.put("foto", usuario.getFoto() != null ? usuario.getFoto() : usuario.getLogo());
+        resp.put("logo", usuario.getLogo() != null ? usuario.getLogo() : usuario.getFoto());
+
         resp.put(
                 "unidades",
                 parseUnidades(usuario.getUnidades())
@@ -97,6 +100,18 @@ public class EmpresarioPayloadMapper {
                 .telefone(
                         blankToNull(
                                 textValue(payload.get("telefone"))
+                        )
+                )
+
+                .foto(
+                        blankToNull(
+                                textValue(payload.get("foto") != null ? payload.get("foto") : payload.get("logo"))
+                        )
+                )
+
+                .logo(
+                        blankToNull(
+                                textValue(payload.get("logo") != null ? payload.get("logo") : payload.get("foto"))
                         )
                 )
 

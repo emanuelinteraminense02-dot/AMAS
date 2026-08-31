@@ -388,14 +388,17 @@ async function definirNovaSenha(id, colecao, novaSenha) {
   if (novaSenha === "123456") return { ok: false, erro: "A nova senha não pode ser a senha padrão (123456)." };
   if (novaSenha.length < 6)   return { ok: false, erro: "A senha deve ter pelo menos 6 caracteres." };
   try {
-    if (colecao === "associados") {
+    if (colecao === "associados" || colecao === "associado") {
       await alterarSenhaAssociado(id, null, novaSenha);
     } else {
-      const u = await getEmpresarioPorId(id);
-      await atualizarEmpresario(id, { ...u, senha: novaSenha, senhaExpirada: false, primeiroLogin: false });
+      let u = null;
+      try {
+        u = await getEmpresarioPorId(id);
+      } catch (_) {}
+      await atualizarEmpresario(id, { ...(u || {}), senha: novaSenha, senhaExpirada: false, primeiroLogin: false });
     }
     return { ok: true };
-  } catch (e) { return { ok: false, erro: e.message }; }
+  } catch (e) { return { ok: false, erro: e.message || e }; }
 }
 
 /* ─── UTILITÁRIOS ──────────────────────────────────────────────────── */

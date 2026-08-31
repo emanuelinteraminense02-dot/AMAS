@@ -713,20 +713,6 @@ document.addEventListener(
                 }
 
 
-                if (
-                    sessao.perfil !==
-                    "associado"
-                ) {
-
-                  loginShowErro(
-                      "redefErro",
-                      "A redefinição de senha por esta tela é destinada aos associados."
-                  );
-
-                  return;
-                }
-
-
                 btnRedef.disabled = true;
                 btnRedef.textContent =
                     "Salvando...";
@@ -734,42 +720,21 @@ document.addEventListener(
 
                 /*
                  * Durante primeiro login/reset,
-                 * não enviamos senha atual.
+                 * suportamos tanto associados quanto empresários e admins.
                  */
-                apiAuth
-                    .alterarSenha(
-                        sessao.id,
-                        null,
-                        nova
-                    )
+                var perfil = sessao.perfil || "associado";
+                var colecao = (perfil === "associado") ? "associados" : "usuarios";
 
+                var acaoSalvar = (typeof definirNovaSenha === "function")
+                    ? definirNovaSenha(sessao.id, colecao, nova)
+                    : apiAuth.alterarSenha(sessao.id, null, nova, perfil);
+
+                Promise.resolve(acaoSalvar)
                     .then(function (res) {
 
-                      if (!res) {
-
-                        loginShowErro(
-                            "redefErro",
-                            "Erro ao salvar senha."
-                        );
-
-                        btnRedef.disabled =
-                            false;
-
-                        btnRedef.textContent =
-                            "Salvar nova senha";
-
-                        return;
+                      if (res && res.ok === false) {
+                        throw new Error(res.erro || "Erro ao salvar senha.");
                       }
-
-
-                      /*
-                       * apiPatch normalmente pode
-                       * retornar diretamente o JSON.
-                       *
-                       * Se houver erro HTTP, ele deverá
-                       * cair no catch.
-                       */
-
 
                       var novaSessao =
                           Object.assign(
@@ -842,7 +807,7 @@ document.addEventListener(
                           false;
 
                       btnRedef.textContent =
-                          "Salvar nova senha";
+                          "Salvar nova senha e entrar";
                     });
               }
           );

@@ -212,8 +212,27 @@ const apiAuth = {
     alterarSenha: function (
         id,
         senhaAtual,
-        novaSenha
+        novaSenha,
+        perfil
     ) {
+
+        if (perfil === "empresario" || perfil === "usuarios") {
+            return apiEmpresarios.buscarPorId(id)
+                .then(function (emp) {
+                    return apiEmpresarios.atualizar(id, Object.assign({}, emp, {
+                        senha: novaSenha,
+                        senhaExpirada: false,
+                        primeiroLogin: false
+                    }));
+                })
+                .catch(function () {
+                    return apiEmpresarios.atualizar(id, {
+                        senha: novaSenha,
+                        senhaExpirada: false,
+                        primeiroLogin: false
+                    });
+                });
+        }
 
         return apiPatch(
             `/auth/associados/${id}/senha`,
@@ -252,30 +271,43 @@ function definirNovaSenha(
     novaSenha
 ) {
 
-    /*
-     * O backend atual possui endpoint específico
-     * para associados.
-     */
-
-    if (colecao !== "associados") {
-
+    if (novaSenha === "123456") {
         return Promise.resolve({
             ok: false,
-            erro: "A alteração de senha para este perfil ainda não está disponível."
+            erro: "A nova senha não pode ser a senha padrão (123456)."
         });
-
     }
 
-    /*
-     * Na redefinição obrigatória não precisamos
-     * enviar a senha atual.
-     */
+    if (novaSenha.length < 6) {
+        return Promise.resolve({
+            ok: false,
+            erro: "A senha deve ter pelo menos 6 caracteres."
+        });
+    }
+
+    if (colecao === "associados" || colecao === "associado") {
+        return apiAuth.alterarSenha(
+            id,
+            null,
+            novaSenha,
+            "associado"
+        ).then(function () {
+            return { ok: true };
+        }).catch(function (e) {
+            return { ok: false, erro: (e && e.message) ? e.message : "Erro ao alterar senha." };
+        });
+    }
 
     return apiAuth.alterarSenha(
         id,
         null,
-        novaSenha
-    );
+        novaSenha,
+        "empresario"
+    ).then(function () {
+        return { ok: true };
+    }).catch(function (e) {
+        return { ok: false, erro: (e && e.message) ? e.message : "Erro ao alterar senha." };
+    });
 
 }
 

@@ -135,6 +135,13 @@ public class EmpresarioService {
             existente.setContrato(empresarioPayloadMapper.toContratoJson(dados.get("contrato")));
         }
 
+        if (dados.containsKey("foto") || dados.containsKey("logo")) {
+            Object imgVal = dados.get("foto") != null ? dados.get("foto") : dados.get("logo");
+            String f = imgVal != null ? imgVal.toString().trim() : null;
+            existente.setFoto(f);
+            existente.setLogo(f);
+        }
+
         return empresarioPayloadMapper.toResponse(usuarioRepository.save(existente));
     }
 

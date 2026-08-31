@@ -10,8 +10,278 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   let emp = await getEmpAtual();
 
-  document.getElementById("empNome").textContent = emp.nome || "Empresário";
-  document.getElementById("empCnpj").textContent = emp.cnpj || "—";
+  function getSidebarAvatar() {
+    return document.getElementById("empSidebarAvatar") ||
+           document.querySelector(".sidebar-avatar-wrap .sidebar-avatar") ||
+           document.querySelector(".sidebar .sidebar-avatar") ||
+           document.querySelector(".sidebar-avatar");
+  }
+
+  let inputLogoGlobal = null;
+  function getInputLogo() {
+    if (inputLogoGlobal && document.body.contains(inputLogoGlobal)) {
+      return inputLogoGlobal;
+    }
+    let inp = document.getElementById("inputLogoEmpresa");
+    if (!inp) {
+      inp = document.createElement("input");
+      inp.type = "file";
+      inp.id = "inputLogoEmpresa";
+      inp.accept = "image/*";
+      inp.style.display = "none";
+      document.body.appendChild(inp);
+    }
+    inp.onchange = (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) processarArquivoLogo(file);
+    };
+    inputLogoGlobal = inp;
+    return inp;
+  }
+
+  function abrirSeletorLogo() {
+    const inp = getInputLogo();
+    if (inp) {
+      inp.value = "";
+      inp.click();
+    }
+  }
+
+  // ── Atualização da sidebar e da logo da empresa
+  async function updateSidebarInfo() {
+    emp = await getEmpAtual();
+    const nomeEl = document.getElementById("empNome");
+    const cnpjEl = document.getElementById("empCnpj");
+    const avatarEl = getSidebarAvatar();
+
+    if (nomeEl) nomeEl.textContent = emp.nome || "Empresário";
+    if (cnpjEl) cnpjEl.textContent = emp.cnpj || "—";
+
+    const sess = getSessao() || {};
+    const logo = emp.logo || emp.foto || sess.logo || sess.foto;
+    if (avatarEl) {
+      avatarEl.classList.add("emp-avatar-clickable");
+      avatarEl.style.cursor = "pointer";
+      avatarEl.title = "Clique para alterar a logo da empresa";
+      if (!avatarEl.id) avatarEl.id = "empSidebarAvatar";
+
+      if (logo) {
+        avatarEl.innerHTML = '<img src="' + logo + '" alt="' + (emp.nome || 'Logo da Empresa') + '" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">' +
+                             '<span class="avatar-hover-overlay" title="Clique para alterar a logo"><i class="bi bi-camera-fill"></i></span>';
+      } else {
+        avatarEl.innerHTML = '<i class="bi bi-building" style="font-size:1.6rem;color:#fff;"></i>' +
+                             '<span class="avatar-hover-overlay" title="Clique para adicionar a logo da empresa"><i class="bi bi-camera-fill"></i></span>';
+      }
+    }
+    renderLogoPreview();
+    setupAvatarListeners();
+  }
+
+  function renderLogoPreview() {
+    const sess = getSessao() || {};
+    const logo = emp.logo || emp.foto || sess.logo || sess.foto;
+    const preview = document.getElementById("empLogoImgPreview");
+    const placeholder = document.getElementById("empLogoPlaceholder");
+    const btnRemover = document.getElementById("btnRemoverLogo");
+
+    if (preview && placeholder) {
+      if (logo) {
+        preview.src = logo;
+        preview.style.display = "block";
+        placeholder.style.display = "none";
+        if (btnRemover) btnRemover.style.display = "inline-flex";
+      } else {
+        preview.src = "";
+        preview.style.display = "none";
+        placeholder.style.display = "block";
+        if (btnRemover) btnRemover.style.display = "none";
+      }
+    }
+  }
+
+  function setupAvatarListeners() {
+    const avatarEl = getSidebarAvatar();
+    if (avatarEl && !avatarEl.dataset.avatarListenerAttached) {
+      avatarEl.dataset.avatarListenerAttached = "true";
+      avatarEl.classList.add("emp-avatar-clickable");
+      avatarEl.style.cursor = "pointer";
+      avatarEl.setAttribute("tabindex", "0");
+      avatarEl.setAttribute("role", "button");
+      avatarEl.setAttribute("aria-label", "Alterar logo da empresa");
+
+      avatarEl.addEventListener("click", (e) => {
+        e.preventDefault();
+        abrirSeletorLogo();
+      });
+      avatarEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          abrirSeletorLogo();
+        }
+      });
+
+      // Suporte a Drag and Drop no avatar da sidebar
+      avatarEl.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        avatarEl.classList.add("avatar-dragover");
+      });
+      avatarEl.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        avatarEl.classList.remove("avatar-dragover");
+      });
+      avatarEl.addEventListener("drop", (e) => {
+        e.preventDefault();
+        avatarEl.classList.remove("avatar-dragover");
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          processarArquivoLogo(e.dataTransfer.files[0]);
+        }
+      });
+    }
+
+    const avatarHint = document.getElementById("empAvatarHint");
+    if (avatarHint && !avatarHint.dataset.hintListenerAttached) {
+      avatarHint.dataset.hintListenerAttached = "true";
+      avatarHint.addEventListener("click", (e) => {
+        e.stopPropagation();
+        abrirSeletorLogo();
+      });
+    }
+
+    const logoPreviewEl = document.getElementById("empLogoPreview");
+    if (logoPreviewEl && !logoPreviewEl.dataset.previewListenerAttached) {
+      logoPreviewEl.dataset.previewListenerAttached = "true";
+      logoPreviewEl.addEventListener("click", abrirSeletorLogo);
+      logoPreviewEl.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        logoPreviewEl.classList.add("dragover");
+      });
+      logoPreviewEl.addEventListener("dragleave", (e) => {
+        e.preventDefault();
+        logoPreviewEl.classList.remove("dragover");
+      });
+      logoPreviewEl.addEventListener("drop", (e) => {
+        e.preventDefault();
+        logoPreviewEl.classList.remove("dragover");
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+          processarArquivoLogo(e.dataTransfer.files[0]);
+        }
+      });
+    }
+  }
+
+  // Inicializar input hidden e sidebar
+  getInputLogo();
+  await updateSidebarInfo();
+
+  async function processarArquivoLogo(file) {
+    if (!file) return;
+
+    if (!file.type || !file.type.startsWith("image/")) {
+      showToast("Selecione um arquivo de imagem válido (PNG, JPG, SVG ou WebP).", "error");
+      const inp = getInputLogo();
+      if (inp) inp.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      showToast("A imagem deve ter no máximo 5MB.", "error");
+      const inp = getInputLogo();
+      if (inp) inp.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const rawBase64 = ev.target.result;
+
+        // Otimizar imagem redimensionando em canvas caso seja muito grande
+        const b64 = await otimizarLogo(rawBase64);
+
+        try {
+          await atualizarEmpresario(emp.id, { logo: b64, foto: b64 });
+        } catch (apiErr) {
+          console.warn("Aviso ao sincronizar com backend, mantendo local:", apiErr);
+        }
+
+        const sessaoAtual = getSessao() || {};
+        sessaoAtual.logo = b64;
+        sessaoAtual.foto = b64;
+        setSessao(sessaoAtual);
+        emp.logo = b64;
+        emp.foto = b64;
+
+        await updateSidebarInfo();
+        showToast("Foto/Logo da empresa atualizada com sucesso!", "success");
+        try { registrarLog("Logo da empresa atualizada", emp.nome, "empresario", "Nova imagem de logo carregada"); } catch (_) {}
+      } catch (ex) {
+        showToast("Erro ao salvar logo: " + (ex.message || ex), "error");
+      } finally {
+        const inp = getInputLogo();
+        if (inp) inp.value = "";
+      }
+    };
+    reader.onerror = () => {
+      showToast("Erro ao processar arquivo selecionado.", "error");
+      const inp = getInputLogo();
+      if (inp) inp.value = "";
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function otimizarLogo(dataUrl) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 400;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/png", 0.9));
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
+  }
+
+  const btnRemoverLogo = document.getElementById("btnRemoverLogo");
+  if (btnRemoverLogo) {
+    btnRemoverLogo.addEventListener("click", async (e) => {
+      e.stopPropagation();
+      if (!confirm("Deseja realmente remover a logo da empresa?")) return;
+      try {
+        await atualizarEmpresario(emp.id, { logo: null, foto: null });
+        const s = getSessao();
+        if (s) {
+          delete s.logo;
+          delete s.foto;
+          setSessao(s);
+        }
+        delete emp.logo;
+        delete emp.foto;
+        await updateSidebarInfo();
+        showToast("Logo removida com sucesso.", "info");
+        try { registrarLog("Logo removida", emp.nome, "empresario", "Logo da empresa removida"); } catch (_) {}
+      } catch (ex) {
+        showToast("Erro ao remover a logo: " + (ex.message || ex), "error");
+      }
+    });
+  }
 
   const historicoSessao = [];
 
