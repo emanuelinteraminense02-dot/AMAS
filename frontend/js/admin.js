@@ -549,6 +549,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (e) { showToast("Erro ao excluir: " + e.message, "error"); }
   };
 
+  window.excluirEmpresa = async function(id) {
+    const emps = await getEmpresarios();
+    const emp = emps.find(x => x.id === id);
+    if (!emp) return;
+
+    if (!confirm('Deseja realmente remover a empresa "' + emp.nome + '"?\nEsta ação excluirá todos os dados e não poderá ser desfeita.')) {
+      return;
+    }
+
+    try {
+      await removerEmpresario(id);
+      showToast("Empresa removida com sucesso.", "info");
+      renderContratos();
+      atualizarBadges();
+    } catch (e) {
+      showToast("Erro ao excluir: " + e.message, "error");
+    }
+  };
+
   window.verAssoc = async function(id) {
     const a = _assocCache.find(x => x.id === id);
     if (!a) return;
@@ -1185,6 +1204,8 @@ async function renderContratos() {
           '<button class="btn btn-outline btn-sm" onclick="imprimirTermoParceria('+emp.id+')"><i class="bi bi-file-earmark-check"></i> Termo</button>' +
           '<button class="btn btn-outline btn-sm" onclick="imprimirAditivo('+emp.id+')"><i class="bi bi-file-earmark-diff"></i> Aditivo</button>' +
           '<button class="btn btn-outline btn-sm" onclick="imprimirSeloVitrine('+emp.id+')"><i class="bi bi-award"></i> Selo de Vitrine</button>' +
+          '<!-- BOTÃO DE REMOVER EMPRESA -->' +
+          '<button class="btn btn-danger btn-sm" onclick="excluirEmpresa('+emp.id+')" title="Remover Empresa"><i class="bi bi-trash-fill"></i></button>' +
           '</div>' +
           '</div>';
     }).join("");
