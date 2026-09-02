@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -132,14 +133,33 @@ public class EmpresarioService {
         }
 
         if (dados.containsKey("contrato")) {
-            existente.setContrato(empresarioPayloadMapper.toContratoJson(dados.get("contrato")));
+            Map<String, Object> novoContrato = new HashMap<>(
+                    empresarioPayloadMapper.parseContrato(empresarioPayloadMapper.toContratoJson(dados.get("contrato")))
+            );
+            Map<String, Object> antigoContrato = empresarioPayloadMapper.parseContrato(existente.getContrato());
+            if (!novoContrato.containsKey("logo") && antigoContrato.containsKey("logo")) {
+                novoContrato.put("logo", antigoContrato.get("logo"));
+            }
+            if (!novoContrato.containsKey("foto") && antigoContrato.containsKey("foto")) {
+                novoContrato.put("foto", antigoContrato.get("foto"));
+            }
+            existente.setContrato(empresarioPayloadMapper.toContratoJson(novoContrato));
         }
 
         if (dados.containsKey("foto") || dados.containsKey("logo")) {
             Object imgVal = dados.get("foto") != null ? dados.get("foto") : dados.get("logo");
             String f = imgVal != null ? imgVal.toString().trim() : null;
-            existente.setFoto(f);
-            existente.setLogo(f);
+            Map<String, Object> contratoMap = new HashMap<>(
+                    empresarioPayloadMapper.parseContrato(existente.getContrato())
+            );
+            if (f != null && !f.isEmpty()) {
+                contratoMap.put("logo", f);
+                contratoMap.put("foto", f);
+            } else {
+                contratoMap.remove("logo");
+                contratoMap.remove("foto");
+            }
+            existente.setContrato(empresarioPayloadMapper.toContratoJson(contratoMap));
         }
 
         return empresarioPayloadMapper.toResponse(usuarioRepository.save(existente));
