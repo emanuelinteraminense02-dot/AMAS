@@ -1,14 +1,22 @@
 <!DOCTYPE html>
-<html lang="pt-br" data-theme="light">
+<html lang="pt-br">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    (function() {
+      try {
+        var s = localStorage.getItem("amas_theme") || "light";
+        document.documentElement.setAttribute("data-theme", s);
+      } catch(e) {}
+    })();
+  </script>
   <title>Painel Administrativo – AMAS</title>
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/painel.css">
-  <link rel="stylesheet" href="css/associado.css">
+  <link rel="stylesheet" href="css/style.css?v=2.6">
+  <link rel="stylesheet" href="css/painel.css?v=2.6">
+  <link rel="stylesheet" href="css/associado.css?v=2.6">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="painel-body">

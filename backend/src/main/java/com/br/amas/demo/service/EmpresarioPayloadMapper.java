@@ -45,8 +45,11 @@ public class EmpresarioPayloadMapper {
         resp.put("senhaExpirada", usuario.getSenhaExpirada());
         resp.put("dataResetSolicit", usuario.getDataResetSolicit());
 
-        resp.put("foto", usuario.getFoto() != null ? usuario.getFoto() : usuario.getLogo());
-        resp.put("logo", usuario.getLogo() != null ? usuario.getLogo() : usuario.getFoto());
+        Map<String, Object> contratoMap = parseContrato(usuario.getContrato());
+        Object logoImg = contratoMap.get("logo") != null ? contratoMap.get("logo") : contratoMap.get("foto");
+
+        resp.put("foto", logoImg);
+        resp.put("logo", logoImg);
 
         resp.put(
                 "unidades",
@@ -55,7 +58,7 @@ public class EmpresarioPayloadMapper {
 
         resp.put(
                 "contrato",
-                parseContrato(usuario.getContrato())
+                contratoMap
         );
 
         return resp;
@@ -66,6 +69,15 @@ public class EmpresarioPayloadMapper {
     // =============================================================
 
     public Usuario fromPayload(Map<String, Object> payload) {
+
+        Map<String, Object> contratoMap = new HashMap<>(
+                parseContrato(toContratoJson(payload.get("contrato")))
+        );
+        Object imgVal = payload.get("foto") != null ? payload.get("foto") : payload.get("logo");
+        if (imgVal != null && !imgVal.toString().isBlank()) {
+            contratoMap.put("logo", imgVal.toString().trim());
+            contratoMap.put("foto", imgVal.toString().trim());
+        }
 
         return Usuario.builder()
 
@@ -103,18 +115,6 @@ public class EmpresarioPayloadMapper {
                         )
                 )
 
-                .foto(
-                        blankToNull(
-                                textValue(payload.get("foto") != null ? payload.get("foto") : payload.get("logo"))
-                        )
-                )
-
-                .logo(
-                        blankToNull(
-                                textValue(payload.get("logo") != null ? payload.get("logo") : payload.get("foto"))
-                        )
-                )
-
                 .primeiroLogin(
                         boolValue(
                                 payload.get("primeiroLogin"),
@@ -144,7 +144,7 @@ public class EmpresarioPayloadMapper {
 
                 .contrato(
                         toContratoJson(
-                                payload.get("contrato")
+                                contratoMap
                         )
                 )
 

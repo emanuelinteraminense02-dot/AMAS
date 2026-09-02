@@ -3,21 +3,61 @@
 ===================================================== */
 
 // ─── TEMA ─────────────────────────────────────────────
+(function initThemeEarly() {
+  try {
+    var saved = localStorage.getItem("amas_theme") || "light";
+    document.documentElement.setAttribute("data-theme", saved);
+  } catch (_) {}
+})();
+
 function initTheme() {
-  const saved = localStorage.getItem("amas_theme") || "light";
+  let saved = "light";
+  try {
+    saved = localStorage.getItem("amas_theme") || "light";
+  } catch (_) {}
   applyTheme(saved);
 }
 
 function applyTheme(theme) {
   document.documentElement.setAttribute("data-theme", theme);
-  localStorage.setItem("amas_theme", theme);
-  const btn = document.getElementById("btnTheme");
-  if (btn) btn.innerHTML = theme === "dark" ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon-stars"></i>';
+  try {
+    localStorage.setItem("amas_theme", theme);
+  } catch (_) {}
+
+  const isDark = theme === "dark";
+  const iconHtml = isDark ? '<i class="bi bi-sun-fill"></i>' : '<i class="bi bi-moon-stars"></i>';
+  const label = isDark ? "Alternar para tema claro" : "Alternar para tema escuro";
+
+  const buttons = document.querySelectorAll(".btn-theme, #btnTheme, #btnTheme2");
+  buttons.forEach(btn => {
+    btn.innerHTML = iconHtml;
+    btn.setAttribute("title", label);
+    btn.setAttribute("aria-label", label);
+  });
 }
 
-function toggleTheme() {
+let _isThemeToggling = false;
+function toggleTheme(e) {
+  if (e && typeof e.preventDefault === "function") e.preventDefault();
+  if (_isThemeToggling) return;
+  _isThemeToggling = true;
+
   const current = document.documentElement.getAttribute("data-theme") || "light";
-  applyTheme(current === "dark" ? "light" : "dark");
+  const next = current === "dark" ? "light" : "dark";
+
+  // Orquestra a transição coordenada de todas as superfícies e cores
+  document.documentElement.classList.add("theme-transitioning");
+
+  const buttons = document.querySelectorAll(".btn-theme, #btnTheme, #btnTheme2");
+  buttons.forEach(b => b.classList.add("theme-btn-rotating"));
+
+  applyTheme(next);
+
+  setTimeout(() => {
+    document.documentElement.classList.remove("theme-transitioning");
+    buttons.forEach(b => b.classList.remove("theme-btn-rotating"));
+    _isThemeToggling = false;
+  }, 350);
 }
 
 // ─── TOAST ────────────────────────────────────────────
@@ -109,8 +149,10 @@ function setActiveNav() {
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   setActiveNav();
-  const btnTheme = document.getElementById("btnTheme");
-  if (btnTheme) btnTheme.addEventListener("click", toggleTheme);
+  document.querySelectorAll(".btn-theme, #btnTheme, #btnTheme2").forEach(btn => {
+    btn.removeEventListener("click", toggleTheme);
+    btn.addEventListener("click", toggleTheme);
+  });
 });
 
 // ─── MÁSCARA CNPJ ──────────────────────────────────────

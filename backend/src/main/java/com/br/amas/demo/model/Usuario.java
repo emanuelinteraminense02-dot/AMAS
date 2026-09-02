@@ -48,11 +48,5 @@ public class Usuario {
     @Column(columnDefinition = "TEXT")
     private String contrato;
 
-    @Column(columnDefinition = "LONGTEXT")
-    private String foto;
-
-    @Column(columnDefinition = "LONGTEXT")
-    private String logo;
-
     private LocalDateTime dataResetSolicit;
 }

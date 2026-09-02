@@ -63,9 +63,17 @@
 /* Badge count */
 .badge-count { background: #cf941d !important; }
 
-/* Dark mode topbar blur */
+/* Dark mode topbar blur & border */
 [data-theme="dark"] .painel-topbar {
-  background: rgba(26, 30, 61, 0.92) !important;
+  background: rgba(18, 19, 31, 0.94) !important;
+  backdrop-filter: blur(12px) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.45) !important;
+}
+
+[data-theme="dark"] .sidebar {
+  border-right-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.4);
 }
 
 /* ── Bootstrap Icons integration ─────────────────── */
@@ -82,10 +90,11 @@
   padding: 14px 24px;
   font-size: 0.75rem;
   color: var(--text-muted);
-  border-top: 1px solid var(--border-color, #e5e7eb);
-  background: var(--bg-card, #fff);
+  border-top: 1px solid var(--border);
+  background: var(--bg-card);
   margin-top: 24px;
   letter-spacing: 0.02em;
+  transition: background-color 0.28s ease, border-color 0.28s ease;
 }
 .painel-footer .footer-sep { opacity: 0.4; }
 
