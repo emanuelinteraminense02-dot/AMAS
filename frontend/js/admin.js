@@ -887,7 +887,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         const lotado     = vagas > 0 && inscritos >= vagas;
         const barColor   = pct >= 90 ? "#ef4444" : pct >= 70 ? "#f59e0b" : "#22c55e";
         const st         = EV_STATUS_MAP[ev.status] || EV_STATUS_MAP["Aberto"];
+        const bannerHtml = ev.banner ? '<div style="width:100%;height:130px;border-radius:var(--radius-sm);overflow:hidden;margin-bottom:12px;border:1px solid var(--border);"><img src="' + ev.banner + '" alt="Banner" style="width:100%;height:100%;object-fit:cover;"></div>' : '';
         return '<div class="card ev-admin-card" style="margin-bottom:14px;">' +
+            bannerHtml +
             '<div class="card-title-row">' +
             '<div>' +
             '<h4 style="font-size:0.95rem;margin-bottom:3px;">' + (TIPO_ICON[ev.tipo]||'<i class=\"bi bi-calendar\"></i>') + " " + ev.titulo + '</h4>' +
@@ -968,11 +970,50 @@ document.addEventListener("DOMContentLoaded", async () => {
     } catch (e) { showToast("Erro: " + e.message, "error"); }
   };
 
+  function atualizarBannerPreview(src, nome) {
+    const previewContainer = document.getElementById("evBannerPreviewContainer");
+    const previewImg = document.getElementById("evBannerPreviewImg");
+    const fileNameEl = document.getElementById("evBannerFileName");
+    const inputBase64 = document.getElementById("evBannerBase64");
+    if (src) {
+      previewImg.src = src;
+      previewContainer.style.display = "block";
+      fileNameEl.textContent = nome || "Banner carregado";
+      inputBase64.value = src;
+    } else {
+      previewImg.src = "";
+      previewContainer.style.display = "none";
+      fileNameEl.textContent = "Nenhuma imagem selecionada";
+      inputBase64.value = "";
+      document.getElementById("evBannerFile").value = "";
+    }
+  }
+
+  document.getElementById("evBannerFile")?.addEventListener("change", function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 3 * 1024 * 1024) {
+      showToast("A imagem deve ter no máximo 3MB.", "error");
+      this.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      atualizarBannerPreview(evt.target.result, file.name);
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById("btnRemoverBanner")?.addEventListener("click", function() {
+    atualizarBannerPreview("", "");
+  });
+
   document.getElementById("btnNovoEvento").addEventListener("click", () => {
     document.getElementById("modalEventoTitulo").textContent = "Novo Evento";
     document.getElementById("formEvento").reset();
     document.getElementById("evIdEdit").value = "";
     document.getElementById("evStatus").value = "Aberto";
+    atualizarBannerPreview("", "");
     document.getElementById("modalEvento").classList.remove("hidden");
   });
 
@@ -989,7 +1030,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       status:      document.getElementById("evStatus").value,
       tipo:        document.getElementById("evTipo").value,
       destaque:    document.getElementById("evDestaque").checked,
-      descricao:   document.getElementById("evDesc").value.trim()
+      descricao:   document.getElementById("evDesc").value.trim(),
+      banner:      document.getElementById("evBannerBase64").value || null
     };
     if (!dados.titulo || !dados.data || !dados.local) { showToast("Preencha os campos obrigatórios.", "error"); return; }
     try {
@@ -1021,6 +1063,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("evDestaque").checked= ev.destaque;
     document.getElementById("evDesc").value      = ev.descricao;
     document.getElementById("evIdEdit").value    = id;
+    atualizarBannerPreview(ev.banner || "", ev.banner ? "Banner existente" : "");
     document.getElementById("modalEvento").classList.remove("hidden");
   };
 

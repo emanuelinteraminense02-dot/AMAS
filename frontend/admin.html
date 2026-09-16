@@ -515,6 +515,24 @@
         </div>
         <div class="form-group"><label for="evDestaque" style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-top:28px;"><input type="checkbox" id="evDestaque"> <span>Destaque</span></label></div>
         <div class="form-group" style="grid-column:1/-1;"><label class="form-label" for="evDesc">Descrição</label><textarea id="evDesc" class="form-input" rows="3"></textarea></div>
+        <div class="form-group" style="grid-column:1/-1;">
+          <label class="form-label" for="evBannerFile"><i class="bi bi-image"></i> Banner do Evento (Imagem)</label>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div id="evBannerPreviewContainer" style="display:none;position:relative;max-width:100%;height:150px;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--border);background:#000;">
+              <img id="evBannerPreviewImg" src="" alt="Banner" style="width:100%;height:100%;object-fit:cover;">
+              <button type="button" id="btnRemoverBanner" class="btn btn-sm btn-danger" style="position:absolute;top:8px;right:8px;padding:4px 8px;font-size:0.75rem;border-radius:6px;"><i class="bi bi-trash"></i> Remover</button>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+              <label for="evBannerFile" class="btn btn-outline btn-sm" style="cursor:pointer;margin:0;">
+                <i class="bi bi-upload"></i> Escolher Imagem
+                <input type="file" id="evBannerFile" accept="image/*" style="display:none;">
+              </label>
+              <span id="evBannerFileName" class="text-muted" style="font-size:0.8rem;">Nenhuma imagem selecionada</span>
+            </div>
+            <input type="hidden" id="evBannerBase64" value="">
+            <small class="text-muted" style="font-size:0.75rem;">Recomendado: 1200x500px ou proporção 16:9. Máx: 3MB (PNG, JPG, WebP).</small>
+          </div>
+        </div>
       </div>
       <input type="hidden" id="evIdEdit" value="">
       <div style="display:flex;gap:12px;margin-top:16px;">

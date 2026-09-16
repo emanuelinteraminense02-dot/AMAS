@@ -96,27 +96,47 @@
 
   <!-- ══ PERFIL ══ -->
   <section id="sec-perfil" class="painel-section">
-    <div class="perfil-grid">
-      <div class="card">
-        <div class="card-title-row">
-          <h3 class="card-title"><i class="bi bi-person-vcard"></i> Dados Pessoais</h3>
-          <button class="btn btn-outline btn-sm" id="btnEditarPerfil"><i class="bi bi-pencil"></i> Editar</button>
+    <div class="perfil-header-card">
+      <div class="perfil-avatar-col">
+        <div class="foto-perfil-preview" id="fotoPreview">
+          <span class="foto-placeholder" id="fotoPlaceholder"><i class="bi bi-person" style="font-size:3rem;"></i></span>
+          <img id="fotoImgPreview" src="" alt="Foto" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;">
         </div>
-        <div class="dados-list" id="dadosPessoais"></div>
+        <label for="inputFoto" class="btn btn-outline btn-sm foto-upload-label" style="cursor:pointer;">
+          <i class="bi bi-camera"></i> Alterar foto
+          <input type="file" id="inputFoto" accept="image/*" style="display:none;">
+        </label>
+        <span class="text-muted" style="font-size:0.75rem;">JPG ou PNG (máx. 2MB)</span>
       </div>
-      <div class="card">
-        <h3 class="card-title"><i class="bi bi-camera"></i> Foto de Perfil</h3>
-        <div class="foto-perfil-wrap">
-          <div class="foto-perfil-preview" id="fotoPreview">
-            <span class="foto-placeholder" id="fotoPlaceholder"><i class="bi bi-person" style="font-size:2.5rem;"></i></span>
-            <img id="fotoImgPreview" src="" alt="Foto" style="display:none;width:100%;height:100%;object-fit:cover;border-radius:50%;">
+
+      <div class="perfil-hero-info">
+        <div class="perfil-hero-top">
+          <div>
+            <h2 id="perfilHeroNome" class="perfil-hero-nome">—</h2>
+            <div class="perfil-hero-badges">
+              <span id="perfilHeroMatricula" class="perfil-badge matricula"><i class="bi bi-hash"></i> —</span>
+              <span id="perfilHeroStatus" class="perfil-badge status">—</span>
+              <span id="perfilHeroData" class="perfil-badge data"><i class="bi bi-calendar-check"></i> —</span>
+            </div>
           </div>
-          <label for="inputFoto" class="btn btn-outline btn-sm foto-upload-label" style="margin-top:12px;cursor:pointer;">
-            <i class="bi bi-camera"></i> Alterar foto
-            <input type="file" id="inputFoto" accept="image/*" style="display:none;">
-          </label>
-          <p class="text-muted" style="font-size:0.78rem;margin-top:6px;">JPG ou PNG – máx. 2MB</p>
+          <button class="btn btn-primary btn-sm" id="btnEditarPerfil"><i class="bi bi-pencil-square"></i> Editar Perfil</button>
         </div>
+      </div>
+    </div>
+
+    <div class="perfil-detalhes-grid">
+      <div class="card perfil-info-card">
+        <div class="card-title-row">
+          <h3 class="card-title"><i class="bi bi-person-lines-fill"></i> Identificação & Contato</h3>
+        </div>
+        <div class="perfil-tiles-list" id="dadosIdentificacao"></div>
+      </div>
+
+      <div class="card perfil-info-card">
+        <div class="card-title-row">
+          <h3 class="card-title"><i class="bi bi-briefcase"></i> Ocupação & Localização</h3>
+        </div>
+        <div class="perfil-tiles-list" id="dadosOcupacao"></div>
       </div>
     </div>
   </section>
@@ -282,20 +302,28 @@
               <div class="cart-org-sub">Associação de São Sebastião/DF</div>
             </div>
           </div>
-          <div class="cart-qr">▣</div>
+          <div class="cart-qr">
+            <i class="bi bi-qr-code" style="font-size: 2rem; color: rgba(255,255,255,0.85);"></i>
+            <span class="cart-qr-label">VALIDAÇÃO OFICIAL</span>
+          </div>
         </div>
         <div class="cart-body">
           <div class="cart-foto" id="cartFoto"><span><i class="bi bi-person" style="font-size:2.5rem;"></i></span></div>
           <div class="cart-info">
             <div class="cart-nome" id="cartNome">—</div>
-            <div class="cart-matricula" id="cartMatricula">—</div>
-            <div class="cart-profissao" id="cartProfissao">—</div>
-            <div class="cart-entrada" id="cartEntrada">—</div>
+            <div class="cart-matricula-chip"><i class="bi bi-person-badge"></i> <span id="cartMatricula">—</span></div>
+            <div class="cart-meta-grid">
+              <div><span class="cart-label">PROFISSÃO</span><div class="cart-valor" id="cartProfissao">—</div></div>
+              <div><span class="cart-label">MEMBRO DESDE</span><div class="cart-valor" id="cartEntrada">—</div></div>
+            </div>
           </div>
         </div>
         <div class="cart-footer">
           <div class="cart-status-badge" id="cartStatusBadge">—</div>
-          <div class="cart-validade">Validade: 12/2025</div>
+          <div class="cart-validade-wrap">
+            <span class="cart-validade-lbl">EXERCÍCIO</span>
+            <span class="cart-validade">2025 / 2026</span>
+          </div>
         </div>
       </div>
       <div style="margin-top:16px;text-align:center;">
@@ -408,6 +436,7 @@
 
     <!-- Corpo do detalhe -->
     <div id="medBody">
+      <div id="medBanner" style="display:none;width:100%;height:180px;border-radius:var(--radius-md);overflow:hidden;margin-bottom:16px;border:1px solid var(--border);"><img id="medBannerImg" src="" alt="Banner" style="width:100%;height:100%;object-fit:cover;"></div>
       <!-- Info principal -->
       <div class="med-info-grid" id="medInfoGrid"></div>
 

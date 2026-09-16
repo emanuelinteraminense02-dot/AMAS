@@ -50,6 +50,7 @@ public class EventoService {
         existente.setVagasTotais(dados.getVagasTotais() != null ? dados.getVagasTotais() : dados.getVagas());
         existente.setStatus(dados.getStatus());
         existente.setDestaque(dados.getDestaque());
+        existente.setBanner(dados.getBanner());
         return eventoRepository.save(existente);
     }
 

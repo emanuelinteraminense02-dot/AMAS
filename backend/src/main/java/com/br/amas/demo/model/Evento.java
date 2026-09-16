@@ -49,4 +49,7 @@ public class Evento {
 
     @Builder.Default
     private Boolean destaque = false;
+
+    @Column(columnDefinition = "LONGTEXT")
+    private String banner;
 }

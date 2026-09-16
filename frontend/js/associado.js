@@ -125,14 +125,62 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ══════════════════════════════════════════════
   async function renderPerfil() {
     assoc = await getAssocAtual();
-    const campos = [
-      ["Nome", assoc.nome], ["CPF", assoc.cpf], ["Nascimento", formatDate(assoc.nascimento)],
-      ["Telefone", assoc.telefone], ["E-mail", assoc.email], ["Endereço", assoc.endereco],
-      ["Profissão", assoc.profissao], ["Matrícula", assoc.matricula], ["Data de entrada", formatDate(assoc.dataEntrada)]
+
+    // Top Hero Card
+    const heroNome = document.getElementById("perfilHeroNome");
+    if (heroNome) heroNome.textContent = assoc.nome || "Associado";
+    const heroMat = document.getElementById("perfilHeroMatricula");
+    if (heroMat) heroMat.innerHTML = '<i class="bi bi-hash"></i> ' + (assoc.matricula || "S/N");
+    const heroStatus = document.getElementById("perfilHeroStatus");
+    if (heroStatus) {
+      const isReg = assoc.status === "Regular";
+      heroStatus.className = "perfil-badge status " + (isReg ? "adimplente" : "atencao");
+      heroStatus.innerHTML = isReg ? '<i class="bi bi-patch-check-fill"></i> Regular' : '<i class="bi bi-exclamation-circle-fill"></i> ' + (assoc.status || "Pendente");
+    }
+    const heroData = document.getElementById("perfilHeroData");
+    if (heroData) heroData.innerHTML = '<i class="bi bi-calendar-check"></i> Membro desde ' + (formatDate(assoc.dataEntrada) || "—");
+
+    // Identificação e Contato
+    const idFields = [
+      { icon: "bi-person-badge", label: "Nome Completo", val: assoc.nome },
+      { icon: "bi-card-text", label: "CPF", val: assoc.cpf },
+      { icon: "bi-calendar3", label: "Data de Nascimento", val: formatDate(assoc.nascimento) },
+      { icon: "bi-telephone", label: "Telefone / WhatsApp", val: assoc.telefone },
+      { icon: "bi-envelope-at", label: "E-mail de Contato", val: assoc.email },
     ];
-    document.getElementById("dadosPessoais").innerHTML = campos.map(([l,v]) =>
-        '<div class="dado-row"><span class="dado-label">' + l + '</span><span class="dado-valor">' + (v||"—") + '</span></div>'
-    ).join("");
+    const idCont = document.getElementById("dadosIdentificacao");
+    if (idCont) {
+      idCont.innerHTML = idFields.map(f =>
+        '<div class="perfil-tile">' +
+          '<div class="perfil-tile-icon"><i class="bi ' + f.icon + '"></i></div>' +
+          '<div class="perfil-tile-content">' +
+            '<span class="perfil-tile-label">' + f.label + '</span>' +
+            '<span class="perfil-tile-val">' + (f.val || "Não informado") + '</span>' +
+          '</div>' +
+        '</div>'
+      ).join("");
+    }
+
+    // Ocupação e Localização
+    const ocupFields = [
+      { icon: "bi-briefcase", label: "Profissão / Ocupação", val: assoc.profissao },
+      { icon: "bi-geo-alt", label: "Endereço Residencial", val: assoc.endereco },
+      { icon: "bi-shield-check", label: "Número de Matrícula", val: assoc.matricula },
+      { icon: "bi-clock-history", label: "Data de Associação", val: formatDate(assoc.dataEntrada) }
+    ];
+    const ocupCont = document.getElementById("dadosOcupacao");
+    if (ocupCont) {
+      ocupCont.innerHTML = ocupFields.map(f =>
+        '<div class="perfil-tile">' +
+          '<div class="perfil-tile-icon"><i class="bi ' + f.icon + '"></i></div>' +
+          '<div class="perfil-tile-content">' +
+            '<span class="perfil-tile-label">' + f.label + '</span>' +
+            '<span class="perfil-tile-val">' + (f.val || "Não informado") + '</span>' +
+          '</div>' +
+        '</div>'
+      ).join("");
+    }
+
     const preview = document.getElementById("fotoImgPreview");
     const placeholder = document.getElementById("fotoPlaceholder");
     if (assoc.foto) { preview.src = assoc.foto; preview.style.display = "block"; placeholder.style.display = "none"; }
@@ -403,19 +451,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ══════════════════════════════════════════════
   async function renderCarteirinha() {
     assoc = await getAssocAtual();
-    document.getElementById("cartNome").textContent      = assoc.nome || "—";
-    document.getElementById("cartMatricula").textContent = assoc.matricula || "—";
-    document.getElementById("cartProfissao").textContent = assoc.profissao || "—";
-    document.getElementById("cartEntrada").textContent   = "Membro desde " + formatDate(assoc.dataEntrada);
+    document.getElementById("cartNome").textContent      = assoc.nome || "Associado AMAS";
+    document.getElementById("cartMatricula").textContent = assoc.matricula || "S/N";
+    document.getElementById("cartProfissao").textContent = assoc.profissao || "Não informada";
+    document.getElementById("cartEntrada").textContent   = formatDate(assoc.dataEntrada) || "—";
     const cartFoto = document.getElementById("cartFoto");
-    if (assoc.foto) { cartFoto.innerHTML = '<img src="'+assoc.foto+'" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">'; }
-    else             { cartFoto.innerHTML = '<span><i class="bi bi-person" style="font-size:2.5rem;"></i></span>'; }
+    if (assoc.foto) { cartFoto.innerHTML = '<img src="'+assoc.foto+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">'; }
+    else             { cartFoto.innerHTML = '<span><i class="bi bi-person" style="font-size:2.5rem;color:rgba(255,255,255,0.7);"></i></span>'; }
     const statusBadge = document.getElementById("cartStatusBadge");
     const isReg = assoc.status === "Regular";
-    statusBadge.innerHTML = isReg ? '<i class="bi bi-check-circle-fill" style="color:#16a34a;"></i> Adimplente' : '<i class="bi bi-exclamation-triangle" style="color:#d97706;"></i> '+assoc.status;
-    statusBadge.style.background = isReg?"rgba(34,197,94,0.2)":"rgba(239,68,68,0.2)";
-    statusBadge.style.color      = isReg?"#16a34a":"#dc2626";
-    statusBadge.style.border     = isReg?"1px solid rgba(34,197,94,0.4)":"1px solid rgba(239,68,68,0.4)";
+    statusBadge.innerHTML = isReg ? '<i class="bi bi-patch-check-fill" style="color:#22c55e;"></i> Adimplente' : '<i class="bi bi-exclamation-triangle-fill" style="color:#ea580c;"></i> ' + (assoc.status || "Pendente");
+    statusBadge.style.background = isReg ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)";
+    statusBadge.style.color      = isReg ? "#4ade80" : "#f87171";
+    statusBadge.style.border     = isReg ? "1px solid rgba(34,197,94,0.4)" : "1px solid rgba(239,68,68,0.4)";
   }
 
   // ── Render inicial
@@ -526,8 +574,13 @@ document.addEventListener("DOMContentLoaded", () => {
     else if (estado==="livre") btnHtml='<button class="ev-card-btn btn-inscrever" onclick="assocInscrever('+ev.id+')"><i class=\"bi bi-check-circle-fill\"></i> Inscrever-se</button>';
     else if (estado==="lotado") btnHtml='<button class="ev-card-btn btn-espera-entrar" onclick="assocInscrever('+ev.id+')">Lista de espera</button>';
     else btnHtml='<button class="ev-card-btn btn-desabilitado" disabled>Em breve</button>';
+    let bannerHtml = "";
+    if (ev.banner) {
+      bannerHtml = '<div class="ev-card-banner"><img src="' + ev.banner + '" alt="' + ev.titulo + '"></div>';
+    }
     return (
         '<div class="ev-card ev-card-estado-'+estado+'" id="evCard-'+ev.id+'">' +
+        bannerHtml +
         '<div class="ev-card-top">' +
         '<div class="ev-card-data"><div class="evd-dia">'+(d||"—")+'</div><div class="evd-mes">'+mesNome+'</div><div class="evd-ano">'+(y||"")+'</div></div>' +
         '<div class="ev-card-main">' +
@@ -562,6 +615,17 @@ document.addEventListener("DOMContentLoaded", () => {
         (evStatus==="Em Breve"?'<span class="badge-ev-status embreve" style="margin-left:8px;">Em Breve</span>':"") +
         (evStatus==="Encerrado"?'<span class="badge-ev-status encerrado" style="margin-left:8px;">Encerrado</span>':"");
     document.getElementById("medTitulo").textContent = ev.titulo;
+    const medBanner = document.getElementById("medBanner");
+    const medBannerImg = document.getElementById("medBannerImg");
+    if (medBanner && medBannerImg) {
+      if (ev.banner) {
+        medBannerImg.src = ev.banner;
+        medBanner.style.display = "block";
+      } else {
+        medBannerImg.src = "";
+        medBanner.style.display = "none";
+      }
+    }
     const [y,m,d]=(ev.data||"").split("-");
     const mesesFull=["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
     document.getElementById("medInfoGrid").innerHTML =
