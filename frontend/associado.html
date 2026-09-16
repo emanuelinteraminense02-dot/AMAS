@@ -77,11 +77,14 @@
 <!-- MAIN -->
 <main class="painel-main">
   <div class="painel-topbar">
-    <div>
+    <div class="painel-topbar-left">
       <h1 class="painel-page-title" id="pageTitle">Meu Perfil</h1>
       <p class="painel-page-sub" id="pageSub">Seus dados cadastrais</p>
     </div>
-    <div id="statusChip"></div>
+    <div class="painel-topbar-right">
+      <span id="topbarClock" class="topbar-clock"></span>
+      <div id="statusChip"></div>
+    </div>
   </div>
 
   <!-- AVISO SENHA -->
@@ -300,6 +303,13 @@
       </div>
     </div>
   </section>
+
+  <!-- Footer institucional fixo -->
+  <footer class="painel-footer">
+    <span>AMAS – Associação de São Sebastião/DF</span>
+    <span class="footer-sep">·</span>
+    <span>CNPJ: 09.399.332/0001-65</span>
+  </footer>
 </main>
 
 <!-- MODAL TROCAR SENHA -->

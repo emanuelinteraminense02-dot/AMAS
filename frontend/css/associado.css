@@ -3,7 +3,7 @@
 /* ── Save Indicator ────────────────────────────────── */
 .save-indicator {
   position: fixed;
-  bottom: 1.25rem;
+  bottom: 3.5rem;
   right: 1rem;
   padding: 0.5rem 1rem;
   border-radius: var(--radius-sm);
@@ -530,10 +530,11 @@
   }
 
   .painel-main {
-    padding: 4.5rem 1rem 1rem;
+    padding: 4.5rem 1rem 4.5rem;
   }
 
   .save-indicator {
+    bottom: 3.25rem;
     left: 1rem;
     right: 1rem;
     text-align: center;

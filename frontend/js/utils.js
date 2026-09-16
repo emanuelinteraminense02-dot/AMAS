@@ -145,10 +145,32 @@ function setActiveNav() {
   });
 }
 
+// ─── RELÓGIO INSTITUCIONAL NO TOPO DIREITO ────────────
+function initTopbarClock() {
+  const clockEl = document.getElementById("topbarClock");
+  if (!clockEl || clockEl.dataset.clockInit) return;
+  clockEl.dataset.clockInit = "true";
+
+  function updateClock() {
+    const now = new Date();
+    const dia = String(now.getDate()).padStart(2, "0");
+    const mes = String(now.getMonth() + 1).padStart(2, "0");
+    const ano = now.getFullYear();
+    const horas = String(now.getHours()).padStart(2, "0");
+    const mins = String(now.getMinutes()).padStart(2, "0");
+    const segs = String(now.getSeconds()).padStart(2, "0");
+    clockEl.innerHTML = '<span class="clock-item"><i class="bi bi-calendar3"></i> ' + dia + '/' + mes + '/' + ano + '</span><span class="clock-sep">·</span><span class="clock-item"><i class="bi bi-clock"></i> ' + horas + ':' + mins + ':' + segs + '</span>';
+  }
+
+  updateClock();
+  setInterval(updateClock, 1000);
+}
+
 // ─── INIT ─────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   setActiveNav();
+  initTopbarClock();
   document.querySelectorAll(".btn-theme, #btnTheme, #btnTheme2").forEach(btn => {
     btn.removeEventListener("click", toggleTheme);
     btn.addEventListener("click", toggleTheme);

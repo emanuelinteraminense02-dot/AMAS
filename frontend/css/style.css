@@ -792,14 +792,56 @@ tbody tr:last-child td { border-bottom: none; }
    STYLE.CSS — Melhorias Visuais Gerais v4.1
 ===================================================== */
 
-/* ── Topbar aprimorada ───────────────────────────── */
+/* ── Topbar / Cabeçalho da Section (Livre de caixa, tipografia aberta e elegante) ── */
 .painel-topbar {
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-card);
-  position: sticky;
-  top: 0;
-  z-index: 99;
-  box-shadow: 0 1px 12px rgba(35,40,80,0.06);
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap !important;
+  gap: 1.25rem !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  position: relative !important;
+  top: auto !important;
+  z-index: 10 !important;
+  padding: 0.25rem 0 1rem 0 !important;
+  margin-bottom: 0.75rem !important;
+  width: 100% !important;
+}
+
+.painel-topbar-left {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.painel-page-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 2.3vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: var(--text-primary);
+  margin: 0 0 4px 0;
+  line-height: 1.25;
+}
+
+.painel-page-sub {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.painel-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  justify-content: flex-end;
+  flex-shrink: 0;
 }
 
 /* ── Cards com hover suave ───────────────────────── */
@@ -844,15 +886,41 @@ tbody tr:last-child td { border-bottom: none; }
   border-left-color: rgba(255,255,255,0.2);
 }
 
-/* ── Topbar clock ────────────────────────────────── */
-#topbarClock {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  background: var(--surface);
-  padding: 5px 12px;
-  border-radius: var(--radius-sm);
+/* ── Topbar clock (Canto Superior Direito) ─────────────────── */
+#topbarClock,
+.topbar-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  padding: 7px 14px;
+  border-radius: 9999px;
   border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(35, 40, 80, 0.05);
   font-feature-settings: "tnum";
+  white-space: nowrap;
+  letter-spacing: 0.015em;
+  transition: background-color 0.28s ease, border-color 0.28s ease, color 0.28s ease;
+}
+
+#topbarClock i,
+.topbar-clock i {
+  color: var(--azul-mid);
+  font-size: 0.95rem;
+}
+
+.topbar-clock .clock-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.topbar-clock .clock-sep {
+  opacity: 0.35;
+  margin: 0 3px;
 }
 
 /* ── Stat cards — borda superior colorida ─────────── */
@@ -1077,10 +1145,17 @@ thead th {
 }
 
 /* Relógio do Topbar no Dark Mode */
-[data-theme="dark"] #topbarClock {
-  background: #1d1f33;
+[data-theme="dark"] #topbarClock,
+[data-theme="dark"] .topbar-clock {
+  background: #181a28;
   border-color: rgba(255, 255, 255, 0.08);
-  color: #a7acc8;
+  color: #c5cbdb;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme="dark"] #topbarClock i,
+[data-theme="dark"] .topbar-clock i {
+  color: #cf941d;
 }
 
 /* Estados Vazios e Indicadores */

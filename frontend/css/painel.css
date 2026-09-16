@@ -16,9 +16,9 @@
   border-right: 1px solid rgba(207,148,29,0.1);
 }
 
-/* Topbar com tom quente */
+/* Topbar limpa e sem caixa */
 .painel-topbar {
-  border-bottom-color: rgba(207,148,29,0.12);
+  border-bottom: none;
 }
 
 /* Btn-primary dourado */
@@ -63,12 +63,13 @@
 /* Badge count */
 .badge-count { background: #cf941d !important; }
 
-/* Dark mode topbar blur & border */
+/* Dark mode topbar - sem caixa, transparente */
 [data-theme="dark"] .painel-topbar {
-  background: rgba(18, 19, 31, 0.94) !important;
-  backdrop-filter: blur(12px) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.45) !important;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  border: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
 }
 
 [data-theme="dark"] .sidebar {
@@ -81,22 +82,38 @@
 .sc-icon { font-size: 1.5rem; display: flex; align-items: center; justify-content: center; }
 .sc-icon i { font-size: 1.4rem; }
 
-/* ── Institutional footer ─────────────────────────── */
+/* ── Institutional footer fixo na base ─────────────────── */
 .painel-footer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 14px 24px;
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  border-top: 1px solid var(--border);
-  background: var(--bg-card);
-  margin-top: 24px;
-  letter-spacing: 0.02em;
-  transition: background-color 0.28s ease, border-color 0.28s ease;
+  position: fixed !important;
+  bottom: 0 !important;
+  left: var(--sidebar-width) !important;
+  right: 0 !important;
+  height: 42px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 0 24px !important;
+  font-size: 0.76rem !important;
+  font-weight: 500 !important;
+  color: var(--text-muted) !important;
+  border-top: 1px solid var(--border) !important;
+  background: rgba(255, 255, 255, 0.95) !important;
+  backdrop-filter: blur(10px) !important;
+  margin-top: 0 !important;
+  letter-spacing: 0.02em !important;
+  z-index: 100 !important;
+  box-shadow: 0 -2px 10px rgba(15, 23, 42, 0.04) !important;
+  transition: background-color 0.28s ease, border-color 0.28s ease, left 0.28s ease !important;
 }
 .painel-footer .footer-sep { opacity: 0.4; }
+
+[data-theme="dark"] .painel-footer {
+  background: rgba(18, 19, 31, 0.94) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.45) !important;
+  color: #8b92ad !important;
+}
 
 /* ── Icon sizing for card titles ─────────────────── */
 .card-title i { font-size: 1rem; margin-right: 4px; vertical-align: -0.1em; }
@@ -181,7 +198,8 @@
 }
 
 .painel-body .painel-main,
-.emp-body .painel-main {
+.emp-body .painel-main,
+.painel-main {
   margin-left: var(--sidebar-width);
   flex: 1;
   min-width: 0;
@@ -190,7 +208,7 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  padding: 1.5rem clamp(1rem, 2vw, 1.75rem) 2rem;
+  padding: 1.5rem clamp(1rem, 2vw, 1.75rem) 4.5rem;
 }
 
 .painel-body .painel-topbar,
@@ -294,10 +312,18 @@
 
 @media (max-width: 48rem) {
   .painel-body .painel-main,
-  .emp-body .painel-main {
+  .emp-body .painel-main,
+  .painel-main {
     margin-left: 0;
     width: 100%;
-    padding: 4.5rem 1rem 1.5rem;
+    padding: 4.5rem 1rem 4.5rem;
+  }
+
+  .painel-footer {
+    left: 0 !important;
+    font-size: 0.72rem !important;
+    padding: 0 12px !important;
+    height: 38px !important;
   }
 
   .sidebar {
