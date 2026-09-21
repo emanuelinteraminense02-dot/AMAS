@@ -1053,6 +1053,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
+  const evDataInput = document.getElementById("evData");
+  if (evDataInput) {
+    evDataInput.min = new Date().toLocaleDateString('en-CA');
+  }
+
   document.getElementById("btnRemoverBanner")?.addEventListener("click", function() {
     atualizarBannerPreview("", "");
   });
@@ -1062,6 +1067,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("formEvento").reset();
     document.getElementById("evIdEdit").value = "";
     document.getElementById("evStatus").value = "Aberto";
+    const hojeStr = new Date().toLocaleDateString('en-CA');
+    const dataInput = document.getElementById("evData");
+    if (dataInput) {
+      dataInput.min = hojeStr;
+      dataInput.value = hojeStr;
+    }
     atualizarBannerPreview("", "");
     document.getElementById("modalEvento").classList.remove("hidden");
   });
@@ -1096,6 +1107,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    const hojeStr = new Date().toLocaleDateString('en-CA');
+    if (!idEdit && dados.data < hojeStr) {
+      showToast("Não é possível criar eventos para datas que já passaram.", "error");
+      if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
+      return;
+    }
+    if (idEdit) {
+      const evAtual = _eventoCache.find(e => e.id === parseInt(idEdit));
+      if (evAtual && dados.data !== evAtual.data && dados.data < hojeStr) {
+        showToast("A nova data do evento não pode ser no passado.", "error");
+        if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
+        return;
+      }
+    }
+
     try {
       if (idEdit) {
         const evAtual = _eventoCache.find(e => e.id === parseInt(idEdit));
@@ -1124,7 +1150,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!ev) return;
     document.getElementById("modalEventoTitulo").textContent = "Editar Evento";
     document.getElementById("evTitulo").value    = ev.titulo;
-    document.getElementById("evData").value      = ev.data;
+    const dataInput = document.getElementById("evData");
+    const hojeStr = new Date().toLocaleDateString('en-CA');
+    if (dataInput) {
+      dataInput.min = (ev.data && ev.data < hojeStr) ? ev.data : hojeStr;
+      dataInput.value = ev.data;
+    }
     document.getElementById("evHorario").value   = ev.horario;
     document.getElementById("evLocal").value     = ev.local;
     document.getElementById("evVagas").value     = ev.vagasTotais || ev.vagas || "";

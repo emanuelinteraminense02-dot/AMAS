@@ -210,13 +210,19 @@ document.addEventListener("DOMContentLoaded", () => {
           ? '<span class="er-status-badge er-status-embreve">Em breve</span>'
           : '<span class="er-status-badge er-status-encerrado">Encerrado</span>';
 
+      const temBanner = Boolean(evento.banner);
+      const bannerHtml = temBanner
+        ? `<div class="er-banner-wrap"><img src="${evento.banner}" alt="${evento.titulo || "Banner do evento"}" class="er-banner-img" loading="lazy" onerror="this.parentElement.style.display='none'; this.closest('.evento-row')?.classList.remove('tem-banner');" /></div>`
+        : "";
+
       return `
-        <div class="evento-row ${evento.destaque ? "destaque " : ""}${rowStatusCls}">
+        <div class="evento-row ${evento.destaque ? "destaque " : ""}${temBanner ? "tem-banner " : ""}${rowStatusCls}">
           <div class="er-date-block ${rowStatusCls}">
             <div class="er-day">${day || "--"}</div>
             <div class="er-month">${month ? MESES_ABREV[Math.max(0, parseInt(month, 10) - 1)] : "--"}</div>
             <div class="er-year">${year || "--"}</div>
           </div>
+          ${bannerHtml}
           <div class="er-info">
             <div class="er-badges">
               <span class="er-tipo ${tipo}">${TIPO_ICON[tipo] || '<i class="bi bi-calendar-event"></i>'} ${TIPO_LABEL[tipo] || tipo}</span>

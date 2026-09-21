@@ -31,6 +31,9 @@ public class EventoService {
     }
 
     public Evento criar(Evento evento) {
+        if (evento.getData() != null && evento.getData().isBefore(java.time.LocalDate.now())) {
+            throw new RuntimeException("Não é permitido criar eventos para datas que já passaram.");
+        }
         evento.setInscricoes(0);
         if (evento.getVagasTotais() == null || evento.getVagasTotais() == 0) {
             evento.setVagasTotais(evento.getVagas() != null ? evento.getVagas() : 0);
@@ -40,6 +43,9 @@ public class EventoService {
 
     public Evento atualizar(Long id, Evento dados) {
         Evento existente = buscarPorId(id);
+        if (dados.getData() != null && !dados.getData().equals(existente.getData()) && dados.getData().isBefore(java.time.LocalDate.now())) {
+            throw new RuntimeException("Não é permitido alterar a data do evento para o passado.");
+        }
         existente.setTitulo(dados.getTitulo());
         existente.setDescricao(dados.getDescricao());
         existente.setTipo(dados.getTipo());
