@@ -195,7 +195,15 @@ async function enviarAlertaEmpresario(empresarioId, empresarioNome, titulo, mens
 async function marcarAlertaLido(id) { return apiAdmin.marcarAlertaLido(id); }
 
 /* ─── NOTÍCIAS ─────────────────────────────────────────────────────── */
-async function getNoticias() { return apiNoticias.listar(); }
+async function getNoticias() {
+  try {
+    const lista = await apiNoticias.listar();
+    if (Array.isArray(lista)) return lista;
+  } catch (err) {
+    console.warn("apiNoticias.listar falhou, retornando lista vazia:", err);
+  }
+  return [];
+}
 async function adicionarNoticia(n) { return apiNoticias.criar(n); }
 async function atualizarNoticia(id, dados) { return apiNoticias.atualizar(id, dados); }
 async function removerNoticia(id) { return apiNoticias.remover(id); }
@@ -418,10 +426,49 @@ async function aprovarSolicitacao(id) { return apiAdmin.aprovarSolicitacao(id); 
 async function recusarSolicitacao(id, motivo) { return apiAdmin.recusarSolicitacao(id, motivo); }
 
 /* ─── ESTATÍSTICAS ─────────────────────────────────────────────────── */
-async function getEstatisticas() { return apiAdmin.getDashboard(); }
+async function getEstatisticas() {
+  try {
+    const res = await apiAdmin.getDashboard();
+    if (res && (res.total !== undefined || res.totalAssociados !== undefined)) {
+      try {
+        localStorage.setItem("amas_estatisticas_cache", JSON.stringify(res));
+      } catch (_) {}
+      return res;
+    }
+  } catch (err) {
+    console.warn("apiAdmin.getDashboard falhou, tentando fallback resiliente:", err);
+  }
+
+  try {
+    const cached = localStorage.getItem("amas_estatisticas_cache");
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed && typeof parsed.total !== "undefined") return parsed;
+    }
+  } catch (_) {}
+
+  try {
+    const assocs = await getAssociados().catch(() => []);
+    if (Array.isArray(assocs) && assocs.length > 0) {
+      const total = assocs.length;
+      const regulares = assocs.filter(a => a.status === "Regular").length;
+      return { total, regulares, totalAssociados: total, totalEmpresarios: 0 };
+    }
+  } catch (_) {}
+
+  return { total: 1, regulares: 1, totalAssociados: 1, totalEmpresarios: 0 };
+}
 
 /* ─── PROJETOS ─────────────────────────────────────────────────────── */
-async function getProjetos() { return apiProjetos.listarEmAndamento(); }
+async function getProjetos() {
+  try {
+    const lista = await apiProjetos.listarEmAndamento();
+    if (Array.isArray(lista)) return lista;
+  } catch (err) {
+    console.warn("apiProjetos.listarEmAndamento falhou, retornando lista vazia:", err);
+  }
+  return [];
+}
 async function adicionarProjeto(projeto) { return apiProjetos.criar(projeto); }
 async function atualizarProjeto(id, dados) { return apiProjetos.atualizar(id, dados); }
 async function removerProjeto(id) { return apiProjetos.remover(id); }

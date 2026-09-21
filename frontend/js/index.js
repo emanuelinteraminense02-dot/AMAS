@@ -314,23 +314,47 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function loadEstatisticas() {
-    state.estatisticas = await getEstatisticas();
-    renderEstatisticas();
+    try {
+      state.estatisticas = await getEstatisticas();
+      renderEstatisticas();
+    } catch (err) {
+      console.warn("Erro ao carregar estatísticas:", err);
+      state.estatisticas = { total: 1, regulares: 1 };
+      renderEstatisticas();
+    }
   }
 
   async function loadNoticias() {
-    state.noticias = await getNoticias();
-    renderNoticiasPublicas(state.noticiasExpandidas);
+    try {
+      state.noticias = await getNoticias();
+      renderNoticiasPublicas(state.noticiasExpandidas);
+    } catch (err) {
+      console.warn("Erro ao carregar notícias:", err);
+      state.noticias = [];
+      renderNoticiasPublicas(false);
+    }
   }
 
   async function loadEventos() {
-    state.eventos = await getEventos();
-    renderEventosPublicos(state.eventosExpandidos);
+    try {
+      state.eventos = await getEventos();
+      renderEventosPublicos(state.eventosExpandidos);
+    } catch (err) {
+      console.warn("Erro ao carregar eventos:", err);
+      state.eventos = [];
+      renderEventosPublicos(false);
+    }
   }
 
   async function loadProjetos() {
-    state.projetos = await getProjetos();
-    renderProjetos();
+    try {
+      state.projetos = await getProjetos();
+      renderProjetos();
+    } catch (err) {
+      console.warn("Erro ao carregar projetos:", err);
+      state.projetos = [];
+      renderProjetos();
+    }
   }
 
   async function loadHomeData() {

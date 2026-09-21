@@ -16,11 +16,7 @@ const API_BASE = (() => {
         return configuredBase.replace(/\/$/, "");
     }
 
-    if (window.location.protocol === "file:") {
-        return "http://localhost:8080/api";
-    }
-
-    return `${window.location.origin.replace(/\/$/, "")}/api`;
+    return "https://amas-m58z.onrender.com/api";
 
 })();
 
@@ -136,20 +132,23 @@ async function apiRequest(
             opts
         );
 
+        const contentType = res.headers.get("content-type") || "";
+
         if (!res.ok) {
 
             let msg = `Erro ${res.status}`;
 
             try {
-
-                const j = await res.json();
-
-                msg =
-                    j.erro ||
-                    j.message ||
-                    j.error ||
-                    msg;
-
+                if (contentType.includes("application/json")) {
+                    const j = await res.json();
+                    msg = j.erro || j.message || j.error || msg;
+                } else {
+                    const rawErr = await res.text();
+                    if (rawErr.includes("<title>")) {
+                        const m = rawErr.match(/<title>(.*?)<\/title>/i);
+                        if (m && m[1]) msg = `Servidor indisponível (${m[1].trim()})`;
+                    }
+                }
             } catch (_) {}
 
             throw new Error(msg);
@@ -158,9 +157,20 @@ async function apiRequest(
 
         const text = await res.text();
 
-        return text
-            ? JSON.parse(text)
-            : null;
+        if (!text) {
+            return null;
+        }
+
+        if (!contentType.includes("application/json") && text.trim().startsWith("<")) {
+            throw new Error("O servidor retornou uma página inesperada. O serviço pode estar reiniciando. Tente novamente em instantes.");
+        }
+
+        try {
+            return JSON.parse(text);
+        } catch (parseErr) {
+            console.error("Erro ao analisar resposta JSON:", parseErr, text.slice(0, 100));
+            throw new Error("Formato de resposta inválido do servidor.");
+        }
 
     } finally {
 
