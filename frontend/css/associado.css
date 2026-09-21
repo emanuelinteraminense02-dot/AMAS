@@ -21,32 +21,7 @@
   opacity: 1;
 }
 
-/* ── Hamburger ─────────────────────────────────────── */
-.hamburger-btn {
-  display: none;
-  position: fixed;
-  top: 1rem;
-  left: 1rem;
-  z-index: 999;
-  background: var(--azul-deep);
-  color: #fff;
-  border-radius: var(--radius-sm);
-  padding: 0.625rem 0.875rem;
-  font-size: 1.1rem;
-  box-shadow: var(--shadow-md);
-}
-
 /* ── Sidebar enhancements ──────────────────────────── */
-.sidebar-close-btn {
-  display: none;
-  color: rgba(255,255,255,0.7);
-  font-size: 1rem;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: var(--transition);
-}
-.sidebar-close-btn:hover { background: rgba(255,255,255,0.1); color: #fff; }
-
 .sidebar-avatar-wrap {
   display: flex;
   flex-direction: column;
@@ -774,9 +749,6 @@
 }
 
 @media (max-width: 640px) {
-  .hamburger-btn     { display: block; }
-  .sidebar-close-btn { display: block; }
-  .painel-main       { margin-left: 0 !important; padding: 70px 16px 20px; }
   .stats-grid        { grid-template-columns: 1fr; }
   .dash-fin-grid     { grid-template-columns: 1fr; }
   .form-grid-2       { grid-template-columns: 1fr; }

@@ -324,12 +324,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (sec === "parceria")  renderParceria();
       if (sec === "unidades")  renderUnidades();
       if (sec === "historico") renderHistorico();
-      document.getElementById("sidebar").classList.remove("sidebar-open");
+      if (window.amasSidebar) {
+        window.amasSidebar.close();
+      } else {
+        document.getElementById("sidebar")?.classList.remove("sidebar-open");
+      }
     });
   });
 
-  document.getElementById("hamburgerBtn").addEventListener("click", () => document.getElementById("sidebar").classList.toggle("sidebar-open"));
-  document.getElementById("sidebarClose").addEventListener("click", () => document.getElementById("sidebar").classList.remove("sidebar-open"));
+  if (!window.amasSidebar) {
+    document.getElementById("hamburgerBtn")?.addEventListener("click", () => document.getElementById("sidebar")?.classList.toggle("sidebar-open"));
+    document.getElementById("sidebarClose")?.addEventListener("click", () => document.getElementById("sidebar")?.classList.remove("sidebar-open"));
+  }
   document.getElementById("btnLogout").addEventListener("click", () => {
     registrarLog("Logout", emp.nome, "empresario", "Sessão encerrada");
     clearSessao(); window.location.href = "login.html";

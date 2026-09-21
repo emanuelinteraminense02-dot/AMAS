@@ -171,11 +171,102 @@ document.addEventListener("DOMContentLoaded", () => {
   initTheme();
   setActiveNav();
   initTopbarClock();
+  initResponsiveSidebar();
   document.querySelectorAll(".btn-theme, #btnTheme, #btnTheme2").forEach(btn => {
     btn.removeEventListener("click", toggleTheme);
     btn.addEventListener("click", toggleTheme);
   });
 });
+
+// ─── SIDEBAR RESPONSIVA (MOBILE & TABLET <= 1024px) ───
+function initResponsiveSidebar() {
+  const sidebar = document.getElementById("sidebar");
+  const hamburgerBtn = document.getElementById("hamburgerBtn");
+  const sidebarClose = document.getElementById("sidebarClose");
+  let overlay = document.getElementById("sidebarOverlay");
+
+  if (!sidebar) return;
+
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "sidebarOverlay";
+    overlay.className = "sidebar-overlay";
+    document.body.appendChild(overlay);
+  }
+
+  function openSidebar() {
+    sidebar.classList.add("sidebar-open");
+    if (overlay) overlay.classList.add("active");
+    document.body.classList.add("sidebar-is-open");
+    if (hamburgerBtn) hamburgerBtn.setAttribute("aria-expanded", "true");
+  }
+
+  function closeSidebar() {
+    sidebar.classList.remove("sidebar-open");
+    if (overlay) overlay.classList.remove("active");
+    document.body.classList.remove("sidebar-is-open");
+    if (hamburgerBtn) hamburgerBtn.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleSidebar() {
+    if (sidebar.classList.contains("sidebar-open")) {
+      closeSidebar();
+    } else {
+      openSidebar();
+    }
+  }
+
+  if (hamburgerBtn) {
+    hamburgerBtn.setAttribute("aria-expanded", "false");
+    hamburgerBtn.onclick = (e) => {
+      e.stopPropagation();
+      toggleSidebar();
+    };
+  }
+
+  if (sidebarClose) {
+    sidebarClose.onclick = (e) => {
+      e.stopPropagation();
+      closeSidebar();
+    };
+  }
+
+  if (overlay) {
+    overlay.onclick = () => {
+      closeSidebar();
+    };
+  }
+
+  // Tecla ESC fecha a sidebar se aberta
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && sidebar.classList.contains("sidebar-open")) {
+      closeSidebar();
+    }
+  });
+
+  // Fecha a gaveta da sidebar ao clicar em qualquer item de navegação no mobile/tablet
+  const navItems = sidebar.querySelectorAll(".nav-item");
+  navItems.forEach((item) => {
+    item.addEventListener("click", () => {
+      if (window.innerWidth <= 1024) {
+        closeSidebar();
+      }
+    });
+  });
+
+  // Fecha a gaveta se redimensionar para desktop (> 1024px)
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 1024 && sidebar.classList.contains("sidebar-open")) {
+      closeSidebar();
+    }
+  });
+
+  window.amasSidebar = {
+    open: openSidebar,
+    close: closeSidebar,
+    toggle: toggleSidebar
+  };
+}
 
 // ─── MÁSCARA CNPJ ──────────────────────────────────────
 function maskCNPJ(input) {

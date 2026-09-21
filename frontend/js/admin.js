@@ -121,12 +121,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (sec === "contratos")    renderContratos();
       if (sec === "recuperacao")  renderRecuperacao();
       atualizarBadges();
-      document.getElementById("sidebar").classList.remove("sidebar-open");
+      if (window.amasSidebar) {
+        window.amasSidebar.close();
+      } else {
+        document.getElementById("sidebar")?.classList.remove("sidebar-open");
+      }
     });
   });
 
-  document.getElementById("hamburgerBtn").addEventListener("click", () => { document.getElementById("sidebar").classList.toggle("sidebar-open"); });
-  document.getElementById("sidebarClose").addEventListener("click", () => { document.getElementById("sidebar").classList.remove("sidebar-open"); });
+  if (!window.amasSidebar) {
+    document.getElementById("hamburgerBtn")?.addEventListener("click", () => { document.getElementById("sidebar")?.classList.toggle("sidebar-open"); });
+    document.getElementById("sidebarClose")?.addEventListener("click", () => { document.getElementById("sidebar")?.classList.remove("sidebar-open"); });
+  }
   document.getElementById("btnLogout").addEventListener("click", () => { registrarLog("Logout","Administrador AMAS","admin","Sessão encerrada"); clearSessao(); window.location.href="login.html"; });
 
   // Inicializa cedo para manter o cadastro funcional mesmo se outro bloco falhar depois.
