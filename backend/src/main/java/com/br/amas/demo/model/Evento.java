@@ -50,6 +50,6 @@ public class Evento {
     @Builder.Default
     private Boolean destaque = false;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "TEXT")
     private String banner;
 }

@@ -995,19 +995,62 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  document.getElementById("evBannerFile")?.addEventListener("change", function(e) {
+  function comprimirImagemBanner(file, maxLargura = 1200, maxAltura = 600, qualidade = 0.85) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onerror = () => resolve(null);
+      reader.onload = (evt) => {
+        const img = new Image();
+        img.onerror = () => resolve(evt.target.result);
+        img.onload = () => {
+          let w = img.width;
+          let h = img.height;
+          if (w > maxLargura || h > maxAltura) {
+            const ratio = Math.min(maxLargura / w, maxAltura / h);
+            w = Math.round(w * ratio);
+            h = Math.round(h * ratio);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", qualidade));
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById("evBannerFile")?.addEventListener("change", async function(e) {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 3 * 1024 * 1024) {
-      showToast("A imagem deve ter no máximo 3MB.", "error");
+    if (file.size > 10 * 1024 * 1024) {
+      showToast("A imagem deve ter no máximo 10MB.", "error");
       this.value = "";
       return;
     }
-    const reader = new FileReader();
-    reader.onload = function(evt) {
-      atualizarBannerPreview(evt.target.result, file.name);
-    };
-    reader.readAsDataURL(file);
+    const fileNameEl = document.getElementById("evBannerFileName");
+    if (fileNameEl) fileNameEl.textContent = "Processando imagem...";
+    try {
+      const dataUrl = await comprimirImagemBanner(file);
+      if (dataUrl) {
+        atualizarBannerPreview(dataUrl, file.name);
+      } else {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          atualizarBannerPreview(evt.target.result, file.name);
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (_) {
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        atualizarBannerPreview(evt.target.result, file.name);
+      };
+      reader.readAsDataURL(file);
+    }
   });
 
   document.getElementById("btnRemoverBanner")?.addEventListener("click", function() {
@@ -1025,6 +1068,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("formEvento").addEventListener("submit", async (e) => {
     e.preventDefault();
+    const btnSubmit = e.target.querySelector("button[type='submit']");
+    const textoOriginal = btnSubmit ? btnSubmit.innerHTML : "Salvar";
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = "Salvando...";
+    }
+
     const idEdit = document.getElementById("evIdEdit").value;
     const vagas  = parseInt(document.getElementById("evVagas").value||0);
     const dados  = {
@@ -1039,7 +1089,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       descricao:   document.getElementById("evDesc").value.trim(),
       banner:      document.getElementById("evBannerBase64").value || null
     };
-    if (!dados.titulo || !dados.data || !dados.local) { showToast("Preencha os campos obrigatórios.", "error"); return; }
+
+    if (!dados.titulo || !dados.data || !dados.local) {
+      showToast("Preencha os campos obrigatórios.", "error");
+      if (btnSubmit) { btnSubmit.disabled = false; btnSubmit.innerHTML = textoOriginal; }
+      return;
+    }
+
     try {
       if (idEdit) {
         const evAtual = _eventoCache.find(e => e.id === parseInt(idEdit));
@@ -1050,9 +1106,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         await adicionarEvento(dados);
       }
       document.getElementById("modalEvento").classList.add("hidden");
-      renderEventos();
-      showToast("Evento salvo!", "success");
-    } catch (ex) { showToast("Erro: " + ex.message, "error"); }
+      await renderEventos();
+      showToast("Evento salvo com sucesso!", "success");
+    } catch (ex) {
+      console.error("Erro ao salvar evento:", ex);
+      showToast("Erro: " + (ex.message || "Não foi possível salvar o evento."), "error");
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = textoOriginal;
+      }
+    }
   });
 
   window.editarEvento = function(id) {
@@ -1073,12 +1137,59 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("modalEvento").classList.remove("hidden");
   };
 
-  window.excluirEvento = async function(id) {
-    if (!confirm("Deseja realmente excluir este evento?")) return;
-    try {
-      await removerEvento(id); renderEventos(); showToast("Evento excluído.", "info");
-    } catch (e) { showToast("Erro: " + e.message, "error"); }
+  let _eventoParaExcluirId = null;
+
+  window.fecharModalExcluirEvento = function() {
+    _eventoParaExcluirId = null;
+    const modal = document.getElementById("modalConfirmarExcluirEvento");
+    if (modal) modal.classList.add("hidden");
   };
+
+  window.excluirEvento = function(id) {
+    if (!id) return;
+    _eventoParaExcluirId = id;
+    const ev = _eventoCache.find(x => Number(x.id) === Number(id) || String(x.id) === String(id));
+    const modal = document.getElementById("modalConfirmarExcluirEvento");
+    const nomeEl = document.getElementById("modalExcluirEventoNome");
+
+    if (modal && nomeEl) {
+      nomeEl.textContent = ev ? ev.titulo : "Evento #" + id;
+      modal.classList.remove("hidden");
+    } else {
+      executarExclusaoEvento(id);
+    }
+  };
+
+  async function executarExclusaoEvento(id) {
+    const btn = document.getElementById("btnConfirmarExcluirEvento");
+    const textoOriginal = btn ? btn.innerHTML : "Sim, Excluir";
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Excluindo...';
+    }
+
+    try {
+      await removerEvento(id);
+      _eventoCache = _eventoCache.filter(x => Number(x.id) !== Number(id) && String(x.id) !== String(id));
+      fecharModalExcluirEvento();
+      await renderEventos();
+      showToast("Evento excluído com sucesso!", "info");
+    } catch (e) {
+      console.error("Erro ao excluir evento:", e);
+      showToast("Erro: " + (e.message || "Não foi possível excluir o evento."), "error");
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+      }
+    }
+  }
+
+  document.getElementById("btnConfirmarExcluirEvento")?.addEventListener("click", () => {
+    if (_eventoParaExcluirId !== null && _eventoParaExcluirId !== undefined) {
+      executarExclusaoEvento(_eventoParaExcluirId);
+    }
+  });
 
   let solicitFiltroAtivo = "todos";
   let _solicitCache = [];

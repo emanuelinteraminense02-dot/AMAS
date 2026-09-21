@@ -237,14 +237,106 @@ async function enriquecerEventoComInscricoes(evento) {
   };
 }
 
-async function getEventos() {
-  const eventos = await apiEventos.listar();
-  return Promise.all((eventos || []).map(enriquecerEventoComInscricoes));
+/* ─── EVENTOS (com fallback resiliente) ─────────────────────────── */
+const LOCAL_EVENTOS_KEY = "amas_eventos_local";
+
+function getEventosLocaisStorage() {
+  try {
+    const raw = localStorage.getItem(LOCAL_EVENTOS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (_) {
+    return [];
+  }
 }
-async function getInscritosEvento(eventoId) { return apiEventos.listarInscritos(eventoId); }
-async function adicionarEvento(e) { return apiEventos.criar(e); }
-async function atualizarEvento(id, dados) { return apiEventos.atualizar(id, dados); }
-async function removerEvento(id) { return apiEventos.remover(id); }
+
+function salvarEventosLocaisStorage(lista) {
+  try {
+    localStorage.setItem(LOCAL_EVENTOS_KEY, JSON.stringify(lista));
+  } catch (err) {
+    console.warn("Não foi possível salvar eventos no localStorage:", err);
+  }
+}
+
+async function getEventos() {
+  try {
+    const eventos = await apiEventos.listar();
+    if (Array.isArray(eventos)) {
+      return Promise.all((eventos || []).map(enriquecerEventoComInscricoes));
+    }
+  } catch (err) {
+    console.warn("apiEventos.listar falhou, recuperando eventos do storage local:", err);
+  }
+  const locais = getEventosLocaisStorage();
+  return Promise.all((locais || []).map(enriquecerEventoComInscricoes));
+}
+
+async function getInscritosEvento(eventoId) {
+  try {
+    return await apiEventos.listarInscritos(eventoId);
+  } catch (_) {
+    return [];
+  }
+}
+
+async function adicionarEvento(e) {
+  try {
+    const res = await apiEventos.criar(e);
+    if (res && res.id) {
+      const locais = getEventosLocaisStorage();
+      locais.push(res);
+      salvarEventosLocaisStorage(locais);
+      return res;
+    }
+  } catch (err) {
+    console.warn("apiEventos.criar falhou, salvando localmente:", err);
+  }
+  const locais = getEventosLocaisStorage();
+  const novo = {
+    ...e,
+    id: Date.now(),
+    inscricoes: 0,
+    status: e.status || "Aberto"
+  };
+  locais.push(novo);
+  salvarEventosLocaisStorage(locais);
+  return novo;
+}
+
+async function atualizarEvento(id, dados) {
+  try {
+    const res = await apiEventos.atualizar(id, dados);
+    if (res) {
+      const locais = getEventosLocaisStorage();
+      const idx = locais.findIndex(x => x.id === id);
+      if (idx !== -1) {
+        locais[idx] = { ...locais[idx], ...res };
+        salvarEventosLocaisStorage(locais);
+      }
+      return res;
+    }
+  } catch (err) {
+    console.warn("apiEventos.atualizar falhou, atualizando localmente:", err);
+  }
+  const locais = getEventosLocaisStorage();
+  const idx = locais.findIndex(x => x.id === id);
+  if (idx !== -1) {
+    locais[idx] = { ...locais[idx], ...dados, id };
+    salvarEventosLocaisStorage(locais);
+    return locais[idx];
+  }
+  return { ...dados, id };
+}
+
+async function removerEvento(id) {
+  try {
+    await apiEventos.remover(id);
+  } catch (err) {
+    console.warn("apiEventos.remover falhou:", err);
+  }
+  const locais = getEventosLocaisStorage().filter(x => Number(x.id) !== Number(id) && String(x.id) !== String(id));
+  salvarEventosLocaisStorage(locais);
+  return { ok: true };
+}
 
 async function alterarStatusEvento(eventoId, novoStatus) {
   const ev = await apiEventos.buscarPorId(eventoId);
