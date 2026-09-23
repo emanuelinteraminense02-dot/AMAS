@@ -196,13 +196,13 @@
             <textarea id="obsContrib" class="form-input" rows="3" placeholder="Ex: Adiantamento de abril, quitação de atraso de fevereiro..."></textarea>
           </div>
           <div class="form-group" style="margin-bottom:16px;">
-            <label class="form-label" for="arquivoComp">Comprovante (imagem ou PDF) *</label>
-            <div class="file-drop-zone" id="fileDropZone">
-              <span class="fdz-icon"><i class="bi bi-paperclip"></i></span>
-              <span class="fdz-text">Arraste o arquivo aqui ou <strong>clique para selecionar</strong></span>
-              <span class="fdz-hint">JPG, PNG ou PDF – máx. 5MB</span>
+            <label class="form-label" for="arquivoComp">Comprovante de Pagamento (somente em PDF) *</label>
+            <div class="file-drop-zone" id="fileDropZone" style="border: 2px dashed rgba(207,148,29,0.35); background: rgba(207,148,29,0.02); transition: all 0.2s ease;">
+              <span class="fdz-icon"><i class="bi bi-file-earmark-pdf-fill" style="color:#ef4444; font-size:2rem;"></i></span>
+              <span class="fdz-text">Arraste o PDF aqui ou <strong>clique para selecionar</strong></span>
+              <span class="fdz-hint"><i class="bi bi-shield-check"></i> Somente documentos em formato PDF (.pdf) – máx. 10MB</span>
               <span class="fdz-selected hidden" id="fdz-selected"></span>
-              <input type="file" id="arquivoComp" accept=".jpg,.jpeg,.png,.pdf" style="display:none;" required>
+              <input type="file" id="arquivoComp" accept=".pdf,application/pdf" style="display:none;" required>
             </div>
             <button type="button" class="btn btn-outline btn-sm hidden" id="btnRemoverArquivo" style="margin-top:12px;">
               <i class="bi bi-trash"></i> Remover arquivo
@@ -226,6 +226,7 @@
             <tr>
               <th>Mês / Data</th>
               <th>Valor</th>
+              <th>Comprovante</th>
               <th>Observações</th>
               <th>Status</th>
               <th>Retorno Admin</th>
@@ -419,8 +420,9 @@
       <textarea id="obsPagamento" class="form-input" rows="3" placeholder="Ex: Quitação de atraso, incluindo juros..."></textarea>
     </div>
     <div class="form-group" style="margin-bottom:14px;">
-      <label class="form-label" for="arquivoParcela">Comprovante (opcional)</label>
-      <input type="file" id="arquivoParcela" class="form-input" accept=".jpg,.jpeg,.png,.pdf">
+      <label class="form-label" for="arquivoParcela"><i class="bi bi-file-earmark-pdf"></i> Comprovante em PDF (opcional)</label>
+      <input type="file" id="arquivoParcela" class="form-input" accept=".pdf,application/pdf">
+      <small style="color:var(--text-muted);font-size:0.75rem;margin-top:4px;display:block;">Apenas arquivos .pdf são aceitos (máx. 10MB).</small>
     </div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;" id="btnConfirmarPagamento">Registrar e enviar para análise</button>
   </div>
@@ -452,6 +454,34 @@
 
       <!-- Botão de ação -->
       <div id="medAcao" style="margin-top:20px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VISUALIZADOR DE COMPROVANTE PDF -->
+<div class="modal-overlay hidden" id="modalVerPdf">
+  <div class="modal modal-lg" style="max-width: 900px; width: 95vw; height: 90vh; display: flex; flex-direction: column;">
+    <div class="modal-header" style="flex-shrink: 0; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+      <div style="min-width:0; flex:1;">
+        <h3 class="modal-title" id="pdfModalTitulo" style="display:flex; align-items:center; gap:8px;">
+          <i class="bi bi-file-earmark-pdf-fill" style="color:#ef4444;"></i>
+          <span id="pdfModalNome">Comprovante de Pagamento</span>
+        </h3>
+        <p id="pdfModalSubtitulo" style="color:var(--text-muted); font-size:0.8rem; margin:2px 0 0;"></p>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <a id="btnBaixarPdfModal" href="#" download class="btn btn-outline btn-sm" target="_blank" rel="noopener">
+          <i class="bi bi-download"></i> Baixar PDF
+        </a>
+        <button class="modal-close" onclick="fecharModalPdf()">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" style="flex:1; padding:0; overflow:hidden; position:relative; background:#1e2238; border-radius:0 0 var(--radius-lg) var(--radius-lg);">
+      <div id="pdfLoadingSpinner" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:#fff; z-index:10; background:rgba(20,24,40,0.85);">
+        <i class="bi bi-arrow-repeat spin" style="font-size:2rem; color:var(--ouro-mid);"></i>
+        <span style="font-size:0.9rem;">Carregando documento PDF...</span>
+      </div>
+      <iframe id="pdfModalIframe" src="" style="width:100%; height:100%; border:none; display:block;" title="Visualizador de PDF"></iframe>
     </div>
   </div>
 </div>

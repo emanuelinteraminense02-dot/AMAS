@@ -3,6 +3,15 @@
 if (typeof Chart !== "undefined") { Chart.defaults.animation = false; Chart.defaults.responsive = true; Chart.defaults.maintainAspectRatio = false; }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
   function textoBusca(valor) { return String(valor || "").toLowerCase(); }
   function statusNormalizado(valor) {
     return String(valor || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -364,54 +373,34 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("mesaCount").textContent = pendentesApi.length + " pendentes";
       document.getElementById("mesaCount").className = "badge " + (pendentesApi.length > 0 ? "badge-analise" : "badge-regular");
       if (pendentesApi.length === 0) {
-        document.getElementById("listaMesa").innerHTML = '<div class="empty-state"><div class="es-icon"></div>Nenhum comprovante aguardando anÃ¡lise.</div>';
-        return;
-      }
-      document.getElementById("listaMesa").innerHTML = pendentesApi.map(({ assoc, contrib }) =>
-          '<div class="mesa-item">' +
-          '<div class="mesa-assoc">' +
-          '<div class="ma-nome">' + assoc.nome + ' <span class="badge badge-analise" style="font-size:0.72rem;">Em anÃ¡lise</span></div>' +
-          '<div class="ma-det">' + assoc.matricula + ' Â· ' + contrib.mes + ' Â· ' + formatMoney(contrib.valor) + ' Â· ' + contrib.data + '</div>' +
-          (contrib.observacoes ? '<div class="ma-obs"><i class=\"bi bi-pencil-square\"></i> ' + contrib.observacoes + '</div>' : '') +
-          '<div class="ma-arquivo"><i class=\"bi bi-paperclip\"></i> ' + (contrib.arquivo||"â€”") + '</div>' +
-          '</div>' +
-          '<div class="mesa-acoes">' +
-          '<button class="btn btn-success btn-sm" onclick="aprovarContrib(' + assoc.id + ',' + contrib.id + ')"><i class="bi bi-check-circle-fill"></i> Aprovar</button>' +
-          '<button class="btn btn-danger btn-sm"  onclick="iniciarRecusa(' + assoc.id + ',' + contrib.id + ')"><i class="bi bi-x-circle-fill"></i> Recusar</button>' +
-          '</div>' +
-          '</div>'
-      ).join("");
-      atualizarBadges();
-      return;
-      const pendentes = [];
-      assocs.forEach(a => {
-        (a.historico||[]).forEach(c => {
-          if (c.status === "Em análise") pendentes.push({ assoc: a, contrib: c });
-        });
-      });
-      document.getElementById("mesaCount").textContent = pendentes.length + " pendentes";
-      document.getElementById("mesaCount").className = "badge " + (pendentes.length > 0 ? "badge-analise" : "badge-regular");
-      if (pendentes.length === 0) {
         document.getElementById("listaMesa").innerHTML = '<div class="empty-state"><div class="es-icon"></div>Nenhum comprovante aguardando análise.</div>';
         return;
       }
-      document.getElementById("listaMesa").innerHTML = pendentes.map(({ assoc, contrib }) =>
-          '<div class="mesa-item">' +
+      document.getElementById("listaMesa").innerHTML = pendentesApi.map(({ assoc, contrib }) => {
+        const fileUrl = contrib.comprovanteUrl || (`/api/comprovantes/${encodeURIComponent(contrib.arquivo || contrib.id)}?associado=${encodeURIComponent(assoc.nome || '')}&mes=${encodeURIComponent(contrib.mes || '')}&valor=${encodeURIComponent(contrib.valor || '')}`);
+        const displayFile = contrib.nomeArquivoOriginal || contrib.arquivo || "comprovante.pdf";
+        return '<div class="mesa-item">' +
           '<div class="mesa-assoc">' +
-          '<div class="ma-nome">' + assoc.nome + ' <span class="badge badge-analise" style="font-size:0.72rem;">Em análise</span></div>' +
-          '<div class="ma-det">' + assoc.matricula + ' · ' + contrib.mes + ' · ' + formatMoney(contrib.valor) + ' · ' + contrib.data + '</div>' +
-          (contrib.observacoes ? '<div class="ma-obs"><i class=\"bi bi-pencil-square\"></i> ' + contrib.observacoes + '</div>' : '') +
-          '<div class="ma-arquivo"><i class=\"bi bi-paperclip\"></i> ' + (contrib.arquivo||"—") + '</div>' +
+          '<div class="ma-nome">' + escapeHtml(assoc.nome) + ' <span class="badge badge-analise" style="font-size:0.72rem;">Em análise</span></div>' +
+          '<div class="ma-det">' + escapeHtml(assoc.matricula || "") + ' · ' + escapeHtml(contrib.mes) + ' · ' + formatMoney(contrib.valor) + ' · ' + (contrib.data || "—") + '</div>' +
+          (contrib.observacoes ? '<div class="ma-obs"><i class="bi bi-pencil-square"></i> ' + escapeHtml(contrib.observacoes) + '</div>' : '') +
+          '<div class="ma-arquivo">' +
+          '<span style="display:inline-flex;align-items:center;gap:4px;"><i class="bi bi-paperclip"></i> ' + escapeHtml(displayFile) + '</span>' +
+          '<button type="button" class="btn-ver-comprovante" onclick="abrirModalComprovanteAdmin(\'' + encodeURIComponent(fileUrl) + '\', \'' + encodeURIComponent(displayFile) + '\', \'' + encodeURIComponent(assoc.nome) + '\', \'' + encodeURIComponent(contrib.mes) + '\', \'' + encodeURIComponent(contrib.valor) + '\')">' +
+          '<i class="bi bi-file-earmark-pdf-fill"></i> Ver Comprovante (PDF)' +
+          '</button>' +
+          '</div>' +
           '</div>' +
           '<div class="mesa-acoes">' +
           '<button class="btn btn-success btn-sm" onclick="aprovarContrib(' + assoc.id + ',' + contrib.id + ')"><i class="bi bi-check-circle-fill"></i> Aprovar</button>' +
           '<button class="btn btn-danger btn-sm"  onclick="iniciarRecusa(' + assoc.id + ',' + contrib.id + ')"><i class="bi bi-x-circle-fill"></i> Recusar</button>' +
           '</div>' +
-          '</div>'
-      ).join("");
+          '</div>';
+      }).join("");
       atualizarBadges();
     } catch (e) {
-      document.getElementById("listaMesa").innerHTML = '<div class="empty-state">Erro ao carregar comprovantes.</div>';
+      console.error("Erro em renderMesa:", e);
+      document.getElementById("listaMesa").innerHTML = '<div class="empty-state">Erro ao carregar comprovantes. ' + escapeHtml(e.message || '') + '</div>';
       showToast("Erro ao carregar mesa de operações.", "error");
     }
   }
@@ -428,6 +417,55 @@ document.addEventListener("DOMContentLoaded", async () => {
     pendRecusarAssocId = aId; pendRecusarContribId = cId;
     document.getElementById("motivoRecusa").value = "";
     document.getElementById("modalRecusar").classList.remove("hidden");
+  };
+
+  // Funções de visualização de comprovante em PDF na mesa de operações
+  window.abrirModalComprovanteAdmin = function(encodedUrl, encodedNome, encodedAssoc, encodedMes, encodedValor) {
+    const url = decodeURIComponent(encodedUrl || '');
+    const nome = decodeURIComponent(encodedNome || 'comprovante.pdf');
+    const assoc = decodeURIComponent(encodedAssoc || '');
+    const mes = decodeURIComponent(encodedMes || '');
+    const valor = decodeURIComponent(encodedValor || '');
+
+    const modal = document.getElementById("modalVerComprovante");
+    const iframe = document.getElementById("adminPdfIframe");
+    const spinner = document.getElementById("adminPdfSpinner");
+    const lblNome = document.getElementById("adminPdfModalNome");
+    const lblMeta = document.getElementById("adminPdfModalMeta");
+    const btnBaixar = document.getElementById("adminBtnBaixarPdf");
+    const btnAba = document.getElementById("adminBtnAbrirNovaAba");
+
+    if (lblNome) lblNome.textContent = nome;
+    if (lblMeta) {
+      lblMeta.textContent = (assoc ? `Associado: ${assoc}` : '') + 
+        (mes ? ` · Mês: ${mes}` : '') + 
+        (valor ? ` · Valor: ${formatMoney(valor)}` : '');
+    }
+
+    if (btnBaixar) {
+      btnBaixar.href = url;
+      btnBaixar.setAttribute('download', nome.endsWith('.pdf') ? nome : nome + '.pdf');
+    }
+    if (btnAba) {
+      btnAba.href = url;
+    }
+
+    if (spinner) spinner.style.display = 'flex';
+    if (iframe) {
+      iframe.onload = () => {
+        if (spinner) spinner.style.display = 'none';
+      };
+      iframe.src = url;
+    }
+
+    if (modal) modal.classList.remove("hidden");
+  };
+
+  window.fecharModalComprovanteAdmin = function() {
+    const modal = document.getElementById("modalVerComprovante");
+    const iframe = document.getElementById("adminPdfIframe");
+    if (iframe) iframe.src = "";
+    if (modal) modal.classList.add("hidden");
   };
 
   document.getElementById("btnConfirmarRecusa").addEventListener("click", async () => {
@@ -588,28 +626,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     const a = _assocCache.find(x => x.id === id);
     if (!a) return;
     const histApi = (await getContribuicoesAssociado(id).catch(() => [])).slice().reverse();
-    const mapApi = { "Aprovado":"badge-aprovado","Recusado":"badge-recusado","Em anÃ¡lise":"badge-analise","RevisÃ£o solicitada":"badge-revisao" };
-    document.getElementById("verAssocContent").innerHTML =
-        '<div class="dados-list">' +
-        [["Nome",a.nome],["CPF",a.cpf],["Nascimento",dataBR(a.nascimento)],["Telefone",a.telefone||"â€”"],["E-mail",a.email],["ProfissÃ£o",a.profissao||"â€”"],["EndereÃ§o",a.endereco||"â€”"],["MatrÃ­cula",a.matricula],["Status",statusBadge(a.status)],["Entrada",dataBR(a.dataEntrada)]].map(
-            ([l,v]) => '<div class="dado-row"><span class="dado-label">'+l+'</span><span class="dado-valor">'+v+'</span></div>'
-        ).join("") +
-        '</div>' +
-        (histApi.length > 0 ? '<h4 style="margin:20px 0 12px;font-size:0.9rem;">HistÃ³rico de contribuiÃ§Ãµes</h4><div class="table-wrapper"><table><thead><tr><th>MÃªs</th><th>Valor</th><th>Status</th><th>ObservaÃ§Ãµes</th></tr></thead><tbody>' +
-            histApi.map(c => '<tr><td>'+c.mes+'</td><td>'+formatMoney(c.valor)+'</td><td><span class="badge ' + (mapApi[c.status]||"badge-pendente") + '">' + c.status + '</span></td><td>'+((c.observacoes||c.msgAdmin||"â€”"))+'</td></tr>').join("") +
-            '</tbody></table></div>' : '<p style="color:var(--text-muted);margin-top:16px;">Nenhuma contribuiÃ§Ã£o registrada.</p>');
-    document.getElementById("modalVerAssoc").classList.remove("hidden");
-    return;
-    const hist = (a.historico||[]).slice().reverse();
-    const map = { "Aprovado":"badge-aprovado","Recusado":"badge-recusado","Em análise":"badge-analise","Revisão solicitada":"badge-revisao" };
+    const mapApi = { "Aprovado":"badge-aprovado","Recusado":"badge-recusado","Em análise":"badge-analise","Revisão solicitada":"badge-revisao" };
     document.getElementById("verAssocContent").innerHTML =
         '<div class="dados-list">' +
         [["Nome",a.nome],["CPF",a.cpf],["Nascimento",dataBR(a.nascimento)],["Telefone",a.telefone||"—"],["E-mail",a.email],["Profissão",a.profissao||"—"],["Endereço",a.endereco||"—"],["Matrícula",a.matricula],["Status",statusBadge(a.status)],["Entrada",dataBR(a.dataEntrada)]].map(
-            ([l,v]) => '<div class="dado-row"><span class="dado-label">'+l+'</span><span class="dado-valor">'+v+'</span></div>'
+            ([l,v]) => '<div class="dado-row"><span class="dado-label">'+escapeHtml(l)+'</span><span class="dado-valor">'+v+'</span></div>'
         ).join("") +
         '</div>' +
-        (hist.length > 0 ? '<h4 style="margin:20px 0 12px;font-size:0.9rem;">Histórico de contribuições</h4><div class="table-wrapper"><table><thead><tr><th>Mês</th><th>Valor</th><th>Status</th><th>Observações</th></tr></thead><tbody>' +
-            hist.map(c => '<tr><td>'+c.mes+'</td><td>'+formatMoney(c.valor)+'</td><td>'+statusBadge(c.status)+'</td><td>'+((c.observacoes||c.msgAdmin||"—"))+'</td></tr>').join("") +
+        (histApi.length > 0 ? '<h4 style="margin:20px 0 12px;font-size:0.9rem;">Histórico de contribuições</h4><div class="table-wrapper"><table><thead><tr><th>Mês</th><th>Valor</th><th>Comprovante</th><th>Status</th><th>Observações</th></tr></thead><tbody>' +
+            histApi.map(c => {
+              const fileUrl = c.comprovanteUrl || (`/api/comprovantes/${encodeURIComponent(c.arquivo || c.id)}?associado=${encodeURIComponent(a.nome || '')}&mes=${encodeURIComponent(c.mes || '')}&valor=${encodeURIComponent(c.valor || '')}`);
+              const displayFile = c.nomeArquivoOriginal || c.arquivo || "comprovante.pdf";
+              const btnPdf = '<button type="button" class="btn-ver-comprovante" onclick="abrirModalComprovanteAdmin(\'' + encodeURIComponent(fileUrl) + '\', \'' + encodeURIComponent(displayFile) + '\', \'' + encodeURIComponent(a.nome) + '\', \'' + encodeURIComponent(c.mes) + '\', \'' + encodeURIComponent(c.valor) + '\')">' +
+                '<i class="bi bi-file-earmark-pdf-fill"></i> Ver PDF' +
+                '</button>';
+              return '<tr><td>'+escapeHtml(c.mes)+'</td><td>'+formatMoney(c.valor)+'</td><td>'+btnPdf+'</td><td><span class="badge ' + (mapApi[c.status]||"badge-pendente") + '">' + escapeHtml(c.status) + '</span></td><td>'+escapeHtml(c.observacoes||c.msgAdmin||"—")+'</td></tr>';
+            }).join("") +
             '</tbody></table></div>' : '<p style="color:var(--text-muted);margin-top:16px;">Nenhuma contribuição registrada.</p>');
     document.getElementById("modalVerAssoc").classList.remove("hidden");
   };

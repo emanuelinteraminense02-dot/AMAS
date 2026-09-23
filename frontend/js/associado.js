@@ -12,7 +12,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function getAssocAtual() {
-    try { return await getAssociadoPorId(sessao.id); } catch (_) { return sessao; }
+    try {
+      const a = await getAssociadoPorId(sessao.id);
+      if (a && a.id) {
+        try {
+          const contribs = await getContribuicoesAssociado(a.id);
+          a.historico = contribs || [];
+        } catch (_) {}
+      }
+      return a;
+    } catch (_) {
+      return sessao;
+    }
   }
   let assoc = await getAssocAtual();
 
@@ -331,14 +342,62 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("modalPagamento").classList.remove("hidden");
   };
 
+  // Helper para converter arquivo em Base64
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // Validador estrito de PDF (extensão e MIME type)
+  function validarArquivoPdf(file) {
+    if (!file) return { valido: false, erro: "Selecione o arquivo de comprovante." };
+    const nome = file.name || "";
+    const ext = nome.substring(nome.lastIndexOf(".")).toLowerCase();
+    if (ext !== ".pdf") {
+      return { valido: false, erro: "Apenas arquivos em formato PDF (.pdf) são permitidos como comprovante." };
+    }
+    if (file.type && file.type !== "application/pdf" && file.type !== "") {
+      return { valido: false, erro: "Formato inválido. O arquivo selecionado deve ser um documento PDF." };
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      return { valido: false, erro: "Arquivo muito grande. O limite máximo é de 10MB." };
+    }
+    return { valido: true };
+  }
+
   document.getElementById("btnConfirmarPagamento").addEventListener("click", async () => {
     if (!parcelaPagarMes) return;
     const obs     = document.getElementById("obsPagamento").value.trim();
     const arquivo = document.getElementById("arquivoParcela").files[0];
+    
+    let base64Pdf = null;
+    let nomeArquivo = "comprovante_parcela.pdf";
+
+    if (arquivo) {
+      const valid = validarArquivoPdf(arquivo);
+      if (!valid.valido) {
+        showToast(valid.erro, "error");
+        return;
+      }
+      try {
+        base64Pdf = await fileToBase64(arquivo);
+        nomeArquivo = arquivo.name;
+      } catch (_) {
+        showToast("Erro ao processar o arquivo PDF.", "error");
+        return;
+      }
+    }
+
     try {
       await adicionarContribuicao(assoc.id, {
         valor: parcelaPagarMes.valor,
-        arquivo: arquivo ? arquivo.name : "comprovante_parcela.pdf",
+        arquivo: nomeArquivo,
+        arquivoBase64: base64Pdf,
+        nomeArquivoOriginal: nomeArquivo,
         mes: parcelaPagarMes.mes,
         status: "Em análise",
         observacoes: obs || "Pagamento de parcela em atraso"
@@ -348,8 +407,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       await atualizarAssociado(assoc.id, { parcelasAtraso: novasParcelas });
       assoc = await getAssocAtual();
       document.getElementById("modalPagamento").classList.add("hidden");
-      renderFinanceiro(); renderStatusChip();
-      showToast("Pagamento registrado! Em análise pelo administrador.", "success");
+      renderFinanceiro(); renderStatusChip(); renderHistorico();
+      showToast("Pagamento registrado com comprovante! Em análise pelo administrador.", "success");
       parcelaPagarMes = null;
     } catch (ex) { showToast("Erro ao registrar pagamento: " + ex.message, "error"); }
   });
@@ -377,15 +436,38 @@ document.addEventListener("DOMContentLoaded", async () => {
   fileDropZone.addEventListener("dragleave", () => fileDropZone.classList.remove("drag-over"));
   fileDropZone.addEventListener("drop", (e) => {
     e.preventDefault(); fileDropZone.classList.remove("drag-over");
-    if (e.dataTransfer.files[0]) { arquivoComp.files = e.dataTransfer.files; showFileSelected(e.dataTransfer.files[0].name); }
+    if (e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      const valid = validarArquivoPdf(file);
+      if (!valid.valido) {
+        document.getElementById("envioErro").textContent = valid.erro;
+        showToast(valid.erro, "error");
+        clearSelectedFile();
+        return;
+      }
+      arquivoComp.files = e.dataTransfer.files;
+      showFileSelected(file.name);
+    }
   });
   arquivoComp.addEventListener("change", () => {
-    if (arquivoComp.files[0]) showFileSelected(arquivoComp.files[0].name);
-    else clearSelectedFile();
+    if (arquivoComp.files[0]) {
+      const file = arquivoComp.files[0];
+      const valid = validarArquivoPdf(file);
+      if (!valid.valido) {
+        document.getElementById("envioErro").textContent = valid.erro;
+        showToast(valid.erro, "error");
+        clearSelectedFile();
+        return;
+      }
+      document.getElementById("envioErro").textContent = "";
+      showFileSelected(file.name);
+    } else {
+      clearSelectedFile();
+    }
   });
   btnRemoverArquivo?.addEventListener("click", clearSelectedFile);
   function showFileSelected(nome) {
-    fdzSelected.innerHTML = '<i class="bi bi-check-circle-fill" style="color:#16a34a;"></i> ' + nome;
+    fdzSelected.innerHTML = '<i class="bi bi-file-earmark-pdf-fill" style="color:#ef4444;font-size:1.1rem;"></i> ' + escapeHtml(nome);
     fdzSelected.classList.remove("hidden");
     btnRemoverArquivo?.classList.remove("hidden");
   }
@@ -401,24 +483,64 @@ document.addEventListener("DOMContentLoaded", async () => {
     const obs     = document.getElementById("obsContrib").value.trim();
     const erroEl  = document.getElementById("envioErro");
     erroEl.textContent = "";
-    if (!mes || !valorRaw || !arquivo) { erroEl.textContent = "Preencha todos os campos e selecione um arquivo."; return; }
-    if (parseFloat(valor) <= 0)        { erroEl.textContent = "O valor deve ser maior que zero."; return; }
-    if (arquivo.size > 5*1024*1024)    { erroEl.textContent = "Arquivo muito grande. Máximo 5MB."; return; }
+
+    if (!mes || !valorRaw || !arquivo) {
+      erroEl.textContent = "Preencha todos os campos obrigatórios e anexe o comprovante em PDF.";
+      return;
+    }
+
+    const validacao = validarArquivoPdf(arquivo);
+    if (!validacao.valido) {
+      erroEl.textContent = validacao.erro;
+      showToast(validacao.erro, "error");
+      return;
+    }
+
+    if (parseFloat(valor) <= 0) {
+      erroEl.textContent = "O valor deve ser maior que zero.";
+      return;
+    }
+
     const [ano, mesNum] = mes.split("-");
     const nomeMes = new Date(parseInt(ano), parseInt(mesNum)-1).toLocaleString("pt-BR", { month:"long", year:"numeric" });
+    
+    // Feedback de carregamento no botão
+    const btnSubmit = e.target.querySelector('button[type="submit"]');
+    const txtOriginal = btnSubmit ? btnSubmit.innerHTML : "";
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Enviando PDF com segurança...';
+    }
+
     try {
+      const base64Pdf = await fileToBase64(arquivo);
+
       await adicionarContribuicao(assoc.id, {
-        valor, arquivo: arquivo.name,
+        valor,
+        arquivo: arquivo.name,
+        arquivoBase64: base64Pdf,
+        nomeArquivoOriginal: arquivo.name,
         mes: nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1),
-        status: "Em análise", observacoes: obs
+        status: "Em análise",
+        observacoes: obs
       });
+
       assoc = await getAssocAtual();
       setSessao({ ...assoc, perfil: "associado" });
       document.getElementById("formComprovante").classList.add("hidden");
       document.getElementById("enviofeedback").classList.remove("hidden");
       renderStatusChip();
-      showToast("Comprovante enviado com sucesso!", "success");
-    } catch (ex) { erroEl.textContent = ex.message || "Erro ao enviar comprovante."; }
+      renderHistorico();
+      showToast("Comprovante em PDF enviado com sucesso!", "success");
+    } catch (ex) {
+      erroEl.textContent = ex.message || "Erro ao enviar comprovante.";
+      showToast(ex.message || "Erro ao enviar comprovante.", "error");
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = txtOriginal;
+      }
+    }
   });
 
   document.getElementById("btnEnviarOutro")?.addEventListener("click", () => {
@@ -437,20 +559,64 @@ document.addEventListener("DOMContentLoaded", async () => {
       const tbody = document.getElementById("tbodyHistorico");
       const hist  = (assoc.historico||[]).slice().reverse();
       if (hist.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="es-icon"><i class="bi bi-clock-history" style="font-size:1.6rem;"></i></div>Nenhuma contribuição registrada ainda.</div></td></tr>'; return;
+        tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="es-icon"><i class="bi bi-clock-history" style="font-size:1.6rem;"></i></div>Nenhuma contribuição registrada ainda.</div></td></tr>'; return;
       }
       const map = { "Regular":"badge-regular","Inadimplente":"badge-inadim","Em análise":"badge-analise","Revisão solicitada":"badge-revisao","Pendente":"badge-pendente","Aprovado":"badge-aprovado","Recusado":"badge-recusado" };
-      tbody.innerHTML = hist.map(c =>
-          '<tr>' +
-          '<td><strong>'+(c.mes||c.data)+'</strong><br><small style="color:var(--text-muted);">'+c.data+'</small></td>' +
+      tbody.innerHTML = hist.map(c => {
+        const fileUrl = c.comprovanteUrl || (`/api/comprovantes/${encodeURIComponent(c.arquivo || c.id)}?associado=${encodeURIComponent(assoc.nome || '')}&mes=${encodeURIComponent(c.mes || '')}&valor=${encodeURIComponent(c.valor || '')}`);
+        const displayFile = c.nomeArquivoOriginal || c.arquivo || "comprovante.pdf";
+        const btnPdf = '<button type="button" class="btn-ver-comprovante" onclick="abrirModalPdf(\'' + encodeURIComponent(fileUrl) + '\', \'' + encodeURIComponent(displayFile) + '\', \'' + encodeURIComponent(c.mes) + '\')">' +
+          '<i class="bi bi-file-earmark-pdf-fill"></i> Ver PDF' +
+          '</button>';
+        return '<tr>' +
+          '<td><strong>'+(c.mes||c.data)+'</strong><br><small style="color:var(--text-muted);">'+(c.data||'—')+'</small></td>' +
           '<td><strong>'+formatMoney(c.valor)+'</strong></td>' +
+          '<td>'+btnPdf+'</td>' +
           '<td style="font-size:0.82rem;color:var(--text-muted);">'+(c.observacoes||'—')+'</td>' +
           '<td><span class="badge '+(map[c.status]||"badge-pendente")+'">'+c.status+'</span></td>' +
           '<td style="font-size:0.85rem;color:var(--text-secondary);">'+(c.msgAdmin||"—")+'</td>' +
-          '</tr>'
-      ).join("");
+          '</tr>';
+      }).join("");
     } catch (e) { showToast("Erro ao carregar histórico.", "error"); }
   }
+
+  // Visualizador de PDF do Associado
+  window.abrirModalPdf = function(encodedUrl, encodedNome, encodedMes) {
+    const url = decodeURIComponent(encodedUrl || '');
+    const nome = decodeURIComponent(encodedNome || 'comprovante.pdf');
+    const mes = decodeURIComponent(encodedMes || '');
+
+    const modal = document.getElementById("modalVerPdf");
+    const iframe = document.getElementById("pdfModalIframe");
+    const spinner = document.getElementById("pdfLoadingSpinner");
+    const lblNome = document.getElementById("pdfModalNome");
+    const lblSub = document.getElementById("pdfModalSubtitulo");
+    const btnBaixar = document.getElementById("btnBaixarPdfModal");
+
+    if (lblNome) lblNome.textContent = nome;
+    if (lblSub) lblSub.textContent = mes ? `Referência: ${mes}` : "";
+    if (btnBaixar) {
+      btnBaixar.href = url;
+      btnBaixar.setAttribute('download', nome.endsWith('.pdf') ? nome : nome + '.pdf');
+    }
+
+    if (spinner) spinner.style.display = 'flex';
+    if (iframe) {
+      iframe.onload = () => {
+        if (spinner) spinner.style.display = 'none';
+      };
+      iframe.src = url;
+    }
+
+    if (modal) modal.classList.remove("hidden");
+  };
+
+  window.fecharModalPdf = function() {
+    const modal = document.getElementById("modalVerPdf");
+    const iframe = document.getElementById("pdfModalIframe");
+    if (iframe) iframe.src = "";
+    if (modal) modal.classList.add("hidden");
+  };
 
   // ══════════════════════════════════════════════
   // CARTEIRINHA DIGITAL

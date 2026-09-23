@@ -126,6 +126,17 @@ function validarCNPJ(cnpj) {
   return dig1 === parseInt(c[12], 10) && dig2 === parseInt(c[13], 10);
 }
 
+// ─── ESCAPE HTML ───────────────────────────────────────
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 // ─── FORMATAÇÃO ───────────────────────────────────────
 function formatMoney(v) {
   return parseFloat(v || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
