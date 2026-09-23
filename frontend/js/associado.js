@@ -582,7 +582,7 @@ document.addEventListener("DOMContentLoaded", () => {
     else btnHtml='<button class="ev-card-btn btn-desabilitado" disabled>Em breve</button>';
     let bannerHtml = "";
     if (ev.banner) {
-      bannerHtml = '<div class="ev-card-banner"><img src="' + ev.banner + '" alt="' + ev.titulo + '"></div>';
+      bannerHtml = '<div class="ev-card-banner"><img src="' + ev.banner + '" alt="' + (ev.titulo || 'Banner') + '" loading="lazy" onerror="this.parentElement.style.display=\'none\';"></div>';
     }
     return (
         '<div class="ev-card ev-card-estado-'+estado+'" id="evCard-'+ev.id+'">' +

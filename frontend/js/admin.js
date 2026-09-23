@@ -893,7 +893,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const lotado     = vagas > 0 && inscritos >= vagas;
         const barColor   = pct >= 90 ? "#ef4444" : pct >= 70 ? "#f59e0b" : "#22c55e";
         const st         = EV_STATUS_MAP[ev.status] || EV_STATUS_MAP["Aberto"];
-        const bannerHtml = ev.banner ? '<div style="width:100%;height:130px;border-radius:var(--radius-sm);overflow:hidden;margin-bottom:12px;border:1px solid var(--border);"><img src="' + ev.banner + '" alt="Banner" style="width:100%;height:100%;object-fit:cover;"></div>' : '';
+        const bannerHtml = ev.banner ? '<div class="ev-admin-banner"><img src="' + ev.banner + '" alt="' + (ev.titulo || 'Banner') + '" loading="lazy" onerror="this.parentElement.style.display=\'none\';"></div>' : '';
         return '<div class="card ev-admin-card" style="margin-bottom:14px;">' +
             bannerHtml +
             '<div class="card-title-row">' +

@@ -1103,6 +1103,78 @@
 .ev-admin-card { transition: var(--transition); }
 .ev-admin-card:hover { box-shadow: var(--shadow-md); }
 
+/* Banner do evento no Admin */
+.ev-admin-banner {
+  width: 100%;
+  aspect-ratio: 16 / 6;
+  min-height: 120px;
+  max-height: 220px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(35,40,80,0.08) 0%, rgba(207,148,29,0.08) 100%);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ev-admin-banner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* Modal Detalhe: Banner do evento */
+.med-banner-container {
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  min-height: 140px;
+  max-height: 260px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  background: linear-gradient(135deg, rgba(35,40,80,0.08) 0%, rgba(207,148,29,0.08) 100%);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-sm);
+}
+.med-banner-container img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* Modal Admin: Preview de Banner */
+.ev-banner-preview-box {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  min-height: 140px;
+  max-height: 240px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #111425;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ev-banner-preview-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
 .ev-ocupacao-row {
   margin-top: 10px;
   display: flex;
@@ -1585,16 +1657,27 @@
 }
 .ev-card-banner {
   width: 100%;
-  height: 140px;
+  aspect-ratio: 16 / 7;
+  min-height: 140px;
+  max-height: 240px;
   overflow: hidden;
-  background: var(--surface);
+  position: relative;
+  background: linear-gradient(135deg, rgba(35,40,80,0.08) 0%, rgba(207,148,29,0.08) 100%);
   border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .ev-card-banner img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   display: block;
+  transition: transform 0.3s ease;
+}
+.ev-card:hover .ev-card-banner img {
+  transform: scale(1.03);
 }
 /* Borda esquerda por estado */
 .ev-card-estado-inscrito        { border-left: 4px solid #22c55e; }
@@ -2109,4 +2192,26 @@
 @media (max-width: 600px) {
   .parceiros-grid { grid-template-columns: 1fr; }
   .impacto-kpis   { grid-template-columns: 1fr; }
+  
+  /* Ajustes responsivos para os banners em mobile */
+  .ev-card-banner {
+    aspect-ratio: 16 / 8;
+    min-height: 120px;
+    max-height: 180px;
+  }
+  .ev-admin-banner {
+    aspect-ratio: 16 / 7;
+    min-height: 110px;
+    max-height: 170px;
+  }
+  .med-banner-container {
+    aspect-ratio: 16 / 8;
+    min-height: 120px;
+    max-height: 200px;
+  }
+  .ev-banner-preview-box {
+    aspect-ratio: 16 / 8;
+    min-height: 120px;
+    max-height: 190px;
+  }
 }
