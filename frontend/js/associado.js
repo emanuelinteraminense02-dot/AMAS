@@ -587,11 +587,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     const mes = decodeURIComponent(encodedMes || '');
 
     const modal = document.getElementById("modalVerPdf");
-    const iframe = document.getElementById("pdfModalIframe");
-    const spinner = document.getElementById("pdfLoadingSpinner");
     const lblNome = document.getElementById("pdfModalNome");
     const lblSub = document.getElementById("pdfModalSubtitulo");
     const btnBaixar = document.getElementById("btnBaixarPdfModal");
+    const btnAba = document.getElementById("btnAbrirNovaAbaModal");
 
     if (lblNome) lblNome.textContent = nome;
     if (lblSub) lblSub.textContent = mes ? `Referência: ${mes}` : "";
@@ -599,22 +598,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       btnBaixar.href = url;
       btnBaixar.setAttribute('download', nome.endsWith('.pdf') ? nome : nome + '.pdf');
     }
-
-    if (spinner) spinner.style.display = 'flex';
-    if (iframe) {
-      iframe.onload = () => {
-        if (spinner) spinner.style.display = 'none';
-      };
-      iframe.src = url;
+    if (btnAba) {
+      btnAba.href = url;
     }
 
     if (modal) modal.classList.remove("hidden");
+
+    if (window.initComprovanteViewers) window.initComprovanteViewers();
+    if (window.comprovanteViewerUser) {
+      window.comprovanteViewerUser.carregar(url, nome);
+    }
   };
 
   window.fecharModalPdf = function() {
     const modal = document.getElementById("modalVerPdf");
-    const iframe = document.getElementById("pdfModalIframe");
-    if (iframe) iframe.src = "";
+    if (window.comprovanteViewerUser) {
+      window.comprovanteViewerUser.limpar();
+    }
     if (modal) modal.classList.add("hidden");
   };
 

@@ -14,9 +14,9 @@
   <title>Painel Administrativo – AMAS</title>
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="css/style.css?v=2.6">
-  <link rel="stylesheet" href="css/painel.css?v=2.6">
-  <link rel="stylesheet" href="css/associado.css?v=2.6">
+  <link rel="stylesheet" href="css/style.css?v=3.0">
+  <link rel="stylesheet" href="css/painel.css?v=3.0">
+  <link rel="stylesheet" href="css/associado.css?v=3.0">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="painel-body">
@@ -470,7 +470,7 @@
         </h3>
         <p id="adminPdfModalMeta" style="color:var(--text-muted); font-size:0.82rem; margin:3px 0 0;"></p>
       </div>
-      <div style="display:flex; align-items:center; gap:8px;">
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
         <a id="adminBtnBaixarPdf" href="#" download class="btn btn-outline btn-sm" target="_blank" rel="noopener">
           <i class="bi bi-download"></i> Baixar Arquivo
         </a>
@@ -480,12 +480,25 @@
         <button class="modal-close" onclick="fecharModalComprovanteAdmin()">✕</button>
       </div>
     </div>
-    <div class="modal-body" style="flex:1; padding:0; overflow:hidden; position:relative; background:#191d33; border-radius:0 0 var(--radius-lg) var(--radius-lg);">
-      <div id="adminPdfSpinner" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:#fff; z-index:10; background:rgba(20,24,40,0.85);">
-        <i class="bi bi-arrow-repeat spin" style="font-size:2rem; color:var(--ouro-mid);"></i>
+    <!-- Barra de Ferramentas de Zoom e Status -->
+    <div class="pdf-toolbar">
+      <button type="button" class="btn btn-outline btn-xs" id="adminPdfZoomOut" title="Reduzir Zoom"><i class="bi bi-zoom-out"></i></button>
+      <span id="adminPdfZoomVal" style="font-size:0.82rem; color:#e2e8f0; min-width:44px; text-align:center; font-weight:600;">100%</span>
+      <button type="button" class="btn btn-outline btn-xs" id="adminPdfZoomIn" title="Aumentar Zoom"><i class="bi bi-zoom-in"></i></button>
+      <button type="button" class="btn btn-outline btn-xs" id="adminPdfZoomFit" title="Ajustar à tela"><i class="bi bi-arrows-angle-expand"></i> Ajustar</button>
+      <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+        <span id="adminPdfPageCount" style="font-size:0.8rem; color:#94a3b8; font-weight:500;">Páginas: 1</span>
+      </div>
+    </div>
+    <!-- Área de Visualização com Canvas HTML5 (Zero iframes, 100% compatível com Edge) -->
+    <div class="modal-body" style="flex:1; padding:0; overflow:hidden; position:relative; background:#0f111f; border-radius:0 0 var(--radius-lg) var(--radius-lg); display:flex; flex-direction:column;">
+      <div id="adminPdfSpinner" style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; color:#fff; z-index:10; background:rgba(15,17,31,0.92);">
+        <i class="bi bi-arrow-repeat spin" style="font-size:2rem; color:var(--ouro-mid, #cf941d);"></i>
         <span style="font-size:0.9rem;">Carregando documento do associado...</span>
       </div>
-      <iframe id="adminPdfIframe" src="" style="width:100%; height:100%; border:none; display:block;" title="Visualizador de Comprovante"></iframe>
+      <div id="adminPdfScrollArea" style="flex:1; overflow-y:auto; overflow-x:auto; padding:20px; display:flex; flex-direction:column; align-items:center; gap:16px;">
+        <!-- Páginas renderizadas via Canvas HTML5 -->
+      </div>
     </div>
   </div>
 </div>
@@ -695,6 +708,8 @@
 <script src="js/api.js"></script>
 <script src="js/database.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/pdf.min.js"></script>
+<script src="js/comprovante-viewer.js"></script>
 <script src="js/admin.js"></script>
 </body>
 </html>

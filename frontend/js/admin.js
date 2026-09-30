@@ -428,8 +428,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const valor = decodeURIComponent(encodedValor || '');
 
     const modal = document.getElementById("modalVerComprovante");
-    const iframe = document.getElementById("adminPdfIframe");
-    const spinner = document.getElementById("adminPdfSpinner");
     const lblNome = document.getElementById("adminPdfModalNome");
     const lblMeta = document.getElementById("adminPdfModalMeta");
     const btnBaixar = document.getElementById("adminBtnBaixarPdf");
@@ -450,21 +448,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       btnAba.href = url;
     }
 
-    if (spinner) spinner.style.display = 'flex';
-    if (iframe) {
-      iframe.onload = () => {
-        if (spinner) spinner.style.display = 'none';
-      };
-      iframe.src = url;
-    }
-
     if (modal) modal.classList.remove("hidden");
+
+    if (window.initComprovanteViewers) window.initComprovanteViewers();
+    if (window.comprovanteViewerAdmin) {
+      window.comprovanteViewerAdmin.carregar(url, nome);
+    }
   };
 
   window.fecharModalComprovanteAdmin = function() {
     const modal = document.getElementById("modalVerComprovante");
-    const iframe = document.getElementById("adminPdfIframe");
-    if (iframe) iframe.src = "";
+    if (window.comprovanteViewerAdmin) {
+      window.comprovanteViewerAdmin.limpar();
+    }
     if (modal) modal.classList.add("hidden");
   };
 
