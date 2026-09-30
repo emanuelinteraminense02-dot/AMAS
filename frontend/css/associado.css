@@ -249,189 +249,447 @@
   gap: 20px;
 }
 
-/* ── Carteirinha digital Profissional ───────────────────────────── */
-.carteirinha-page { display: flex; flex-direction: column; align-items: center; padding: 24px 0 36px; }
+/* ── Carteirinha Digital Institucional e Formal ──────────────────── */
+.carteirinha-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 40px;
+}
+
 .carteirinha-digital {
   width: 100%;
-  max-width: 470px;
-  background: radial-gradient(circle at 100% 0%, rgba(207,148,29,0.18) 0%, transparent 45%),
-              linear-gradient(135deg, #181c3b 0%, #222752 50%, #111428 100%);
-  border-radius: 20px;
-  padding: 28px 26px 24px;
+  max-width: 490px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(207, 148, 29, 0.22) 0%, transparent 45%),
+    radial-gradient(circle at 0% 100%, rgba(46, 53, 102, 0.35) 0%, transparent 50%),
+    repeating-linear-gradient(45deg, rgba(207, 148, 29, 0.02) 0px, rgba(207, 148, 29, 0.02) 2px, transparent 2px, transparent 8px),
+    linear-gradient(135deg, #0d1024 0%, #171d3d 50%, #0d1127 100%);
+  border-radius: 18px;
+  padding: 22px 24px 20px;
   color: #fff;
-  box-shadow: 0 20px 50px rgba(17,20,40,0.45), 0 0 0 1px rgba(255,255,255,0.12) inset;
+  border: 1.5px solid rgba(207, 148, 29, 0.55);
+  box-shadow:
+    0 24px 60px rgba(5, 8, 20, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 0 30px rgba(207, 148, 29, 0.08) inset;
   position: relative;
   overflow: hidden;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
+
 .carteirinha-digital:hover {
   transform: translateY(-4px);
-  box-shadow: 0 28px 65px rgba(17,20,40,0.55), 0 0 0 1px rgba(207,148,29,0.3) inset;
+  box-shadow:
+    0 30px 70px rgba(5, 8, 20, 0.75),
+    0 0 0 1px rgba(207, 148, 29, 0.45) inset,
+    0 0 35px rgba(207, 148, 29, 0.12) inset;
 }
+
 .carteirinha-digital::before {
   content: "";
   position: absolute;
-  top: -60px;
-  right: -60px;
-  width: 220px;
-  height: 220px;
+  top: -40px;
+  right: -40px;
+  width: 240px;
+  height: 240px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(207,148,29,0.15) 0%, rgba(255,255,255,0) 70%);
+  background: radial-gradient(circle, rgba(207, 148, 29, 0.12) 0%, rgba(255, 255, 255, 0) 70%);
   pointer-events: none;
 }
+
 .carteirinha-digital::after {
-  content: "";
+  content: "AMAS";
   position: absolute;
-  bottom: -40px;
-  left: -40px;
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, rgba(255,255,255,0) 70%);
+  right: 18px;
+  bottom: 35px;
+  font-family: var(--font-display);
+  font-size: 5.5rem;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.025);
+  letter-spacing: 0.05em;
   pointer-events: none;
+  user-select: none;
+  line-height: 1;
 }
+
+.cart-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #cf941d;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(207, 148, 29, 0.28);
+  padding-bottom: 8px;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 2;
+}
+
+.cart-top-dot {
+  color: rgba(255, 255, 255, 0.4);
+}
+
 .cart-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 22px;
+  margin-bottom: 18px;
   position: relative;
   z-index: 2;
-  border-bottom: 1px solid rgba(255,255,255,0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding-bottom: 16px;
+  gap: 12px;
 }
-.cart-logo-area { display: flex; align-items: center; gap: 14px; }
+
+.cart-logo-area {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Logo da carteirinha: 100% redondo, sem borda branca */
 .cart-logo-real {
-  width: 46px;
-  height: 46px;
-  border-radius: 12px;
-  background: #ffffff;
-  padding: 3px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  width: 52px;
+  height: 52px;
+  border-radius: 50% !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border: 2px solid #cf941d !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  object-fit: cover !important;
+  flex-shrink: 0;
+  display: block;
 }
-.cart-org { font-family: var(--font-display); font-size: 1.2rem; font-weight: 800; letter-spacing: 0.04em; color: #fff; line-height: 1.1; }
-.cart-org-sub { font-size: 0.74rem; color: rgba(255,255,255,0.7); margin-top: 2px; }
-.cart-qr {
+
+.cart-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.cart-org {
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #f6c86a;
+  line-height: 1.1;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.cart-doc-type {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: #ffffff;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.cart-org-sub {
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cart-org-cnpj {
+  font-size: 0.58rem;
+  font-family: monospace;
+  color: rgba(207, 148, 29, 0.85);
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+.cart-qr-col {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  text-align: center;
-  background: rgba(255,255,255,0.06);
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(255,255,255,0.1);
+  flex-shrink: 0;
 }
-.cart-qr-label {
-  font-size: 0.58rem;
-  letter-spacing: 0.08em;
-  font-weight: 700;
-  color: rgba(255,255,255,0.65);
-}
-.cart-body {
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  margin-bottom: 20px;
-  position: relative;
-  z-index: 2;
-}
-.cart-foto {
-  width: 82px;
-  height: 82px;
-  border-radius: 16px;
-  background: rgba(255,255,255,0.08);
+
+.cart-qr {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 2.4rem;
-  flex-shrink: 0;
-  border: 2.5px solid rgba(207,148,29,0.55);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
-  overflow: hidden;
+  background: rgba(207, 148, 29, 0.1);
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(207, 148, 29, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
-.cart-info { flex: 1; min-width: 0; }
+
+.cart-qr i {
+  font-size: 2.1rem;
+  color: #f6c86a;
+  line-height: 1;
+}
+
+.cart-qr-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 3px;
+}
+
+.cart-qr-label {
+  font-size: 0.54rem;
+  letter-spacing: 0.09em;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.cart-qr-sub {
+  font-size: 0.50rem;
+  letter-spacing: 0.05em;
+  color: #cf941d;
+  font-weight: 700;
+}
+
+.cart-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 2;
+}
+
+.cart-foto-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.cart-foto {
+  width: 90px;
+  height: 110px;
+  border-radius: 12px;
+  background: rgba(20, 25, 55, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 2px solid #cf941d;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+  overflow: hidden;
+  position: relative;
+}
+
+.cart-foto-badge {
+  margin-top: -8px;
+  background: #cf941d;
+  color: #0d1024;
+  font-size: 0.54rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  padding: 1px 7px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  z-index: 3;
+}
+
+.cart-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.cart-nome-block {
+  margin-bottom: 8px;
+}
+
 .cart-nome {
   font-family: var(--font-display);
-  font-size: 1.18rem;
-  font-weight: 700;
-  margin-bottom: 6px;
+  font-size: 1.15rem;
+  font-weight: 800;
+  margin-top: 1px;
   line-height: 1.25;
   color: #ffffff;
-  letter-spacing: -0.01em;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-transform: uppercase;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
+
+.cart-tags-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
 .cart-matricula-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  background: rgba(255,255,255,0.1);
-  padding: 3px 10px;
+  gap: 6px;
+  background: rgba(207, 148, 29, 0.14);
+  padding: 4px 10px;
   border-radius: 6px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-family: monospace;
-  font-weight: 600;
-  color: #cf941d;
-  border: 1px solid rgba(207,148,29,0.25);
-  margin-bottom: 10px;
+  font-weight: 700;
+  color: #f6c86a;
+  border: 1px solid rgba(207, 148, 29, 0.45);
 }
+
+.cart-mat-lbl {
+  font-size: 0.64rem;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.6);
+  font-family: var(--font-body);
+}
+
+.cart-mat-num {
+  font-family: monospace;
+  font-weight: 800;
+}
+
+.cart-tipo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 4px 9px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.cart-tipo-chip i {
+  color: #cf941d;
+  font-size: 0.72rem;
+}
+
 .cart-meta-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 8px 12px;
 }
+
+.cart-meta-item {
+  min-width: 0;
+}
+
 .cart-label {
   display: block;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
-  color: rgba(255,255,255,0.55);
+  font-size: 0.60rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #cf941d;
+  text-transform: uppercase;
   margin-bottom: 2px;
 }
+
 .cart-valor {
   font-size: 0.82rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.92);
+  color: #ffffff;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Rodapé da Carteirinha */
 .cart-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid rgba(255,255,255,0.1);
-  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  padding-top: 14px;
+  margin-bottom: 12px;
   position: relative;
   z-index: 2;
+  gap: 12px;
 }
+
+.cart-status-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
 .cart-status-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 5px 12px;
   border-radius: 9999px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
+
 .cart-validade-wrap {
   text-align: right;
 }
+
 .cart-validade-lbl {
   display: block;
-  font-size: 0.62rem;
-  font-weight: 700;
+  font-size: 0.58rem;
+  font-weight: 800;
   letter-spacing: 0.08em;
-  color: rgba(255,255,255,0.5);
+  color: #cf941d;
+  text-transform: uppercase;
 }
+
 .cart-validade {
-  font-size: 0.84rem;
-  font-weight: 700;
-  color: rgba(255,255,255,0.85);
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #ffffff;
   font-family: monospace;
+}
+
+/* Faixa de Segurança e Código de Barras */
+.cart-security-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px dashed rgba(207, 148, 29, 0.3);
+  padding-top: 8px;
+  position: relative;
+  z-index: 2;
+  font-size: 0.56rem;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.cart-security-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.cart-security-info i {
+  color: #cf941d;
+  font-size: 0.65rem;
+}
+
+.cart-security-barcode {
+  font-family: monospace;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 700;
+}
+
+.carteirinha-actions {
+  margin-top: 20px;
+  text-align: center;
 }
 
 /* ── Nova Formatação Elegante do Perfil do Associado ── */

@@ -623,19 +623,39 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ══════════════════════════════════════════════
   async function renderCarteirinha() {
     assoc = await getAssocAtual();
-    document.getElementById("cartNome").textContent      = assoc.nome || "Associado AMAS";
-    document.getElementById("cartMatricula").textContent = assoc.matricula || "S/N";
-    document.getElementById("cartProfissao").textContent = assoc.profissao || "Não informada";
-    document.getElementById("cartEntrada").textContent   = formatDate(assoc.dataEntrada) || "—";
+    const nomeEl = document.getElementById("cartNome");
+    if (nomeEl) nomeEl.textContent = (assoc.nome || "Associado AMAS").toUpperCase();
+    const matEl = document.getElementById("cartMatricula");
+    if (matEl) matEl.textContent = assoc.matricula || "S/N";
+    const profEl = document.getElementById("cartProfissao");
+    if (profEl) profEl.textContent = assoc.profissao || "Não informada";
+    const entEl = document.getElementById("cartEntrada");
+    if (entEl) entEl.textContent = formatDate(assoc.dataEntrada) || "—";
+    const cpfEl = document.getElementById("cartCpf");
+    if (cpfEl) {
+      if (assoc.cpf) {
+        const c = String(assoc.cpf).replace(/\D/g, "");
+        cpfEl.textContent = c.length === 11 ? c.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.***.***-$4") : assoc.cpf;
+      } else {
+        cpfEl.textContent = "—";
+      }
+    }
     const cartFoto = document.getElementById("cartFoto");
-    if (assoc.foto) { cartFoto.innerHTML = '<img src="'+assoc.foto+'" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">'; }
-    else             { cartFoto.innerHTML = '<span><i class="bi bi-person" style="font-size:2.5rem;color:rgba(255,255,255,0.7);"></i></span>'; }
+    if (cartFoto) {
+      if (assoc.foto) {
+        cartFoto.innerHTML = '<img src="'+assoc.foto+'" alt="Foto Associado" style="width:100%;height:100%;object-fit:cover;border-radius:10px;display:block;">';
+      } else {
+        cartFoto.innerHTML = '<span><i class="bi bi-person-fill" style="font-size:2.8rem;color:rgba(207,148,29,0.75);"></i></span>';
+      }
+    }
     const statusBadge = document.getElementById("cartStatusBadge");
-    const isReg = assoc.status === "Regular";
-    statusBadge.innerHTML = isReg ? '<i class="bi bi-patch-check-fill" style="color:#22c55e;"></i> Adimplente' : '<i class="bi bi-exclamation-triangle-fill" style="color:#ea580c;"></i> ' + (assoc.status || "Pendente");
-    statusBadge.style.background = isReg ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)";
-    statusBadge.style.color      = isReg ? "#4ade80" : "#f87171";
-    statusBadge.style.border     = isReg ? "1px solid rgba(34,197,94,0.4)" : "1px solid rgba(239,68,68,0.4)";
+    if (statusBadge) {
+      const isReg = assoc.status === "Regular";
+      statusBadge.innerHTML = isReg ? '<i class="bi bi-shield-fill-check"></i> ADIMPLENTE' : '<i class="bi bi-exclamation-triangle-fill"></i> ' + (assoc.status || "PENDENTE").toUpperCase();
+      statusBadge.style.background = isReg ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)";
+      statusBadge.style.color      = isReg ? "#4ade80" : "#f87171";
+      statusBadge.style.border     = isReg ? "1px solid rgba(34,197,94,0.45)" : "1px solid rgba(239,68,68,0.45)";
+    }
   }
 
   // ── Render inicial
