@@ -14,10 +14,11 @@
   <title>Portal do Empresário – AMAS</title>
   <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link rel="stylesheet" href="css/style.css?v=2.6">
-  <link rel="stylesheet" href="css/painel.css?v=2.6">
-  <link rel="stylesheet" href="css/associado.css?v=2.6">
-  <link rel="stylesheet" href="css/empresario.css?v=2.6">
+  <link rel="stylesheet" href="css/style.css?v=3.0">
+  <link rel="stylesheet" href="css/painel.css?v=3.0">
+  <link rel="stylesheet" href="css/associado.css?v=3.0">
+  <link rel="stylesheet" href="css/empresario.css?v=3.0">
+  <link rel="stylesheet" href="css/chat.css?v=3.0">
 </head>
 <body class="emp-body">
 <div id="saveIndicator" class="save-indicator"></div>
@@ -45,6 +46,10 @@
     </button>
     <button class="nav-item" data-section="alerta">
       <span class="nav-icon"><i class="bi bi-bell"></i></span><span>Enviar Alerta</span>
+    </button>
+    <button class="nav-item" data-section="chat" id="navChatEmpresario">
+      <span class="nav-icon"><i class="bi bi-chat-dots-fill"></i></span><span>Chat com Admin</span>
+      <span class="badge-count hidden" id="badgeChatEmpresario">0</span>
     </button>
     <button class="nav-item" data-section="historico">
       <span class="nav-icon"><i class="bi bi-clock-history"></i></span><span>Histórico</span>
@@ -189,6 +194,60 @@
     </div>
   </section>
 
+  <!-- ══ CHAT DIRETO COM A ADMINISTRAÇÃO ══ -->
+  <section id="sec-chat" class="painel-section hidden">
+    <div class="chat-container">
+      <main class="chat-main" style="width:100%;height:100%;">
+        <header class="chat-header">
+          <div class="chat-header-user">
+            <div class="chat-header-avatar" style="border-color:#cf941d;background:#232850;">
+              <img src="assets/logo-amas.png?v=3.0" alt="AMAS" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+            </div>
+            <div class="chat-header-details">
+              <div class="chat-header-name">
+                <span>Administração AMAS</span>
+                <span class="chat-role-pill chat-role-admin">Diretoria de Parcerias</span>
+              </div>
+              <div class="chat-header-sub">
+                <span>Canal Oficial de Convênios & Parcerias</span> · <span id="empChatAdminStatus" style="color:#22c55e;"><i class="bi bi-circle-fill" style="font-size:0.55rem;"></i> Atendimento Ativo</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn btn-outline btn-xs" onclick="window.chatUI.atualizarMensagens()" title="Atualizar mensagens">
+              <i class="bi bi-arrow-clockwise"></i> Atualizar
+            </button>
+          </div>
+        </header>
+
+        <div style="padding:8px 18px;background:rgba(207,148,29,0.08);border-bottom:1px solid rgba(207,148,29,0.2);display:flex;align-items:center;gap:10px;font-size:0.8rem;color:#f6c86a;">
+          <i class="bi bi-handshake-fill" style="color:#cf941d;font-size:0.95rem;"></i>
+          <span><strong>Canal Exclusivo Empresa-Diretoria:</strong> Envie propostas de benefícios, dúvidas sobre o convênio, contratos e arquivos diretamente para os administradores da AMAS.</span>
+        </div>
+
+        <div class="chat-messages-area" id="empChatMessagesArea">
+          <!-- Mensagens renderizadas dinamicamente -->
+        </div>
+
+        <div class="chat-typing-indicator hidden" id="empChatTypingIndicator"></div>
+
+        <footer class="chat-footer">
+          <div id="empChatStagedAttachment" class="chat-staged-attachment" style="display:none;"></div>
+          <div class="chat-input-row">
+            <input type="file" id="empChatFileInput" style="display:none;" onchange="window.chatUI.aoSelecionarArquivo(event, 'emp')">
+            <button type="button" class="chat-btn-attach" title="Anexar proposta, documento, comprovante ou contrato" onclick="document.getElementById('empChatFileInput').click()">
+              <i class="bi bi-paperclip"></i>
+            </button>
+            <textarea id="empChatInputText" class="chat-input" rows="1" placeholder="Envie sua mensagem ou documento para a Administração AMAS..." onkeydown="window.chatUI.aoDigitarTexto(event, 'emp')"></textarea>
+            <button type="button" class="chat-btn-send" id="empChatBtnSend" onclick="window.chatUI.enviarMensagemAtual('emp')">
+              <i class="bi bi-send-fill"></i>
+            </button>
+          </div>
+        </footer>
+      </main>
+    </div>
+  </section>
+
   <!-- ══ HISTÓRICO CONSULTAS ══ -->
   <section id="sec-historico" class="painel-section hidden">
     <div class="card">
@@ -240,6 +299,8 @@
 <script src="js/api.js"></script>
 <script src="js/database.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/chat-client.js?v=3.0"></script>
+<script src="js/chat-ui.js?v=3.0"></script>
 <script src="js/empresario.js"></script>
 </body>
 </html>

@@ -99,7 +99,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     historico:   ["Histórico",             "Todas as suas contribuições"],
     carteirinha: ["Carteirinha Digital",   "Sua identificação de associado"],
     parceiros:   ["Empresas Parceiras",    "Descontos e benefícios exclusivos para você"],
-    eventos:     ["Meus Eventos",          "Inscrições e eventos da AMAS"]
+    eventos:     ["Meus Eventos",          "Inscrições e eventos da AMAS"],
+    chat:        ["Chat com a Administração", "Canal exclusivo de atendimento individual e envio de documentos"]
   };
 
   navItems.forEach(item => {
@@ -114,6 +115,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       assoc = await getAssocAtual();
       if (sec === "perfil")      renderPerfil();
       if (sec === "mensagens")   renderMensagens();
+      if (sec === "chat")        window.chatUI?.iniciarCliente('associado');
       if (sec === "financeiro")  renderFinanceiro();
       if (sec === "historico")   renderHistorico();
       if (sec === "carteirinha") renderCarteirinha();

@@ -80,6 +80,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (bMesa)  { bMesa.textContent  = pendentes;       pendentes       > 0 ? bMesa.classList.remove("hidden")  : bMesa.classList.add("hidden"); }
       if (bAlert) { bAlert.textContent = alertasNaoLidos; alertasNaoLidos > 0 ? bAlert.classList.remove("hidden") : bAlert.classList.add("hidden"); }
       if (bRec)   { bRec.textContent   = pendRec;         pendRec         > 0 ? bRec.classList.remove("hidden")   : bRec.classList.add("hidden"); }
+      if (window.chatUI) window.chatUI.atualizarBadgesGlobais();
     } catch (_) {}
   }
 
@@ -94,6 +95,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     associados:  ["Associados",             "Gerencie todos os membros da associação"],
     broadcast:   ["Broadcast",              "Envie mensagens para grupos de usuários"],
     alertas:     ["Alertas de Empresários", "Comunicados urgentes dos parceiros"],
+    chat:        ["Chat & Atendimento Privado", "Comunicação individual em tempo real com Associados e Empresários"],
     relatorios:  ["Relatórios",             "Dados e exportação do sistema"],
     monitor:     ["Monitor de Atividades",  "Log de ações realizadas no sistema"],
     noticias:    ["Notícias",               "Publique e gerencie as notícias da AMAS"],
@@ -122,6 +124,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (sec === "associados")   renderAssociados();
       if (sec === "broadcast")    renderBroadcast();
       if (sec === "alertas")      renderAlertas();
+      if (sec === "chat")         window.chatUI?.iniciarAdmin();
       if (sec === "relatorios")   renderRelatorios();
       if (sec === "monitor")      renderMonitor();
       if (sec === "noticias")     renderNoticias();

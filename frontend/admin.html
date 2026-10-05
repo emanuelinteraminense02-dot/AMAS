@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/style.css?v=3.0">
   <link rel="stylesheet" href="css/painel.css?v=3.0">
   <link rel="stylesheet" href="css/associado.css?v=3.0">
+  <link rel="stylesheet" href="css/chat.css?v=3.0">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="painel-body">
@@ -43,6 +44,10 @@
     <button class="nav-item" data-section="alertas" id="navAlertas">
       <span class="nav-icon"><i class="bi bi-bell"></i></span><span>Alertas</span>
       <span class="badge-count hidden" id="badgeAlertas">0</span>
+    </button>
+    <button class="nav-item" data-section="chat" id="navChatAdmin">
+      <span class="nav-icon"><i class="bi bi-chat-dots-fill"></i></span><span>Chat & Atendimento</span>
+      <span class="badge-count hidden" id="badgeChatAdmin">0</span>
     </button>
     <button class="nav-item" data-section="contratos"><span class="nav-icon"><i class="bi bi-people-fill"></i></span><span>Parcerias</span></button>
     <button class="nav-item" data-section="relatorios"><span class="nav-icon"><i class="bi bi-file-earmark-bar-graph"></i></span><span>Relatórios</span></button>
@@ -281,6 +286,98 @@
         <span id="recuperacaoCount" class="badge badge-analise" style="display:none;"></span>
       </div>
       <div id="listaRecuperacao"></div>
+    </div>
+  </section>
+
+  <!-- ══ CHAT & ATENDIMENTO PRIVADO ══ -->
+  <section id="sec-chat" class="painel-section hidden">
+    <div class="chat-container">
+      <!-- Coluna de Contatos Separados por Abas (Associados / Empresários) -->
+      <aside class="chat-sidebar">
+        <div class="chat-sidebar-header">
+          <div class="chat-sidebar-title">
+            <span><i class="bi bi-chat-dots-fill" style="color:#cf941d;"></i> Atendimento Privado</span>
+            <span id="chatTotalUnreadBadge" class="badge-count hidden">0</span>
+          </div>
+          <div class="chat-tabs">
+            <button type="button" class="chat-tab-btn active" id="chatTabAssoc" onclick="window.chatUI.trocarAbaAdmin('associados')">
+              <i class="bi bi-people-fill"></i> Associados
+              <span id="chatTabAssocBadge" class="chat-contact-badge hidden">0</span>
+            </button>
+            <button type="button" class="chat-tab-btn" id="chatTabEmp" onclick="window.chatUI.trocarAbaAdmin('empresarios')">
+              <i class="bi bi-building"></i> Empresários
+              <span id="chatTabEmpBadge" class="chat-contact-badge hidden">0</span>
+            </button>
+          </div>
+          <div class="chat-search-wrap">
+            <i class="bi bi-search"></i>
+            <input type="text" id="chatSearchInput" class="chat-search-input" placeholder="Buscar por nome, matrícula, CNPJ..." oninput="window.chatUI.filtrarContatos(this.value)">
+          </div>
+        </div>
+        <div class="chat-contacts-list" id="chatContactsList">
+          <!-- Carregado dinamicamente via chat-ui.js -->
+        </div>
+      </aside>
+
+      <!-- Área Principal de Conversa Particular -->
+      <main class="chat-main" id="chatMainArea">
+        <!-- Estado inicial: Nenhuma conversa selecionada -->
+        <div class="chat-empty-state" id="chatEmptyState">
+          <div class="chat-empty-icon"><i class="bi bi-chat-square-quote"></i></div>
+          <h3 style="color:#fff;margin-bottom:6px;font-weight:700;">Atendimento Privado AMAS</h3>
+          <p style="font-size:0.88rem;color:#94a3b8;max-width:420px;line-height:1.55;">
+            Selecione um associado ou empresário na lista lateral para abrir o canal exclusivo em tempo real.
+          </p>
+        </div>
+
+        <!-- Painel ativo quando seleciona um contato -->
+        <div id="chatActivePanel" style="display:none;flex-direction:column;height:100%;min-width:0;">
+          <header class="chat-header">
+            <div class="chat-header-user">
+              <button type="button" class="btn btn-outline btn-xs" id="chatBtnMobileBack" style="display:none;margin-right:8px;" onclick="window.chatUI.fecharMobile()" title="Voltar à lista">
+                <i class="bi bi-arrow-left"></i>
+              </button>
+              <div class="chat-header-avatar" id="chatActiveAvatar">
+                <i class="bi bi-person"></i>
+              </div>
+              <div class="chat-header-details">
+                <div class="chat-header-name">
+                  <span id="chatActiveNome">Usuário</span>
+                  <span id="chatActiveRolePill" class="chat-role-pill chat-role-assoc">Associado</span>
+                </div>
+                <div class="chat-header-sub">
+                  <span id="chatActiveSub">AMAS</span> · <span id="chatActiveStatus" style="color:#22c55e;"><i class="bi bi-circle-fill" style="font-size:0.55rem;"></i> Online</span>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button type="button" class="btn btn-outline btn-xs" onclick="window.chatUI.atualizarMensagens()" title="Atualizar histórico">
+                <i class="bi bi-arrow-clockwise"></i> Atualizar
+              </button>
+            </div>
+          </header>
+
+          <div class="chat-messages-area" id="chatMessagesArea">
+            <!-- Mensagens renderizadas dinamicamente -->
+          </div>
+
+          <div class="chat-typing-indicator hidden" id="chatTypingIndicator"></div>
+
+          <footer class="chat-footer">
+            <div id="chatStagedAttachment" class="chat-staged-attachment" style="display:none;"></div>
+            <div class="chat-input-row">
+              <input type="file" id="chatFileInput" style="display:none;" onchange="window.chatUI.aoSelecionarArquivo(event, 'admin')">
+              <button type="button" class="chat-btn-attach" title="Anexar arquivo, imagem ou PDF" onclick="document.getElementById('chatFileInput').click()">
+                <i class="bi bi-paperclip"></i>
+              </button>
+              <textarea id="chatInputText" class="chat-input" rows="1" placeholder="Digite uma resposta para o atendimento..." onkeydown="window.chatUI.aoDigitarTexto(event, 'admin')"></textarea>
+              <button type="button" class="chat-btn-send" id="chatBtnSend" onclick="window.chatUI.enviarMensagemAtual('admin')">
+                <i class="bi bi-send-fill"></i>
+              </button>
+            </div>
+          </footer>
+        </div>
+      </main>
     </div>
   </section>
 
@@ -710,6 +807,8 @@
 <script src="js/utils.js"></script>
 <script src="js/pdf.min.js"></script>
 <script src="js/comprovante-viewer.js"></script>
+<script src="js/chat-client.js?v=3.0"></script>
+<script src="js/chat-ui.js?v=3.0"></script>
 <script src="js/admin.js"></script>
 </body>
 </html>

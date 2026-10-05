@@ -309,6 +309,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     parceria:  ["Minha Parceria",         "Contrato, contribuições e benefícios AMAS"],
     unidades:  ["Minhas Unidades",        "Gerencie seus estabelecimentos"],
     alerta:    ["Enviar Alerta",          "Comunicação direta com o administrador"],
+    chat:      ["Chat com a Administração", "Canal exclusivo para propostas, dúvidas e documentos com a Diretoria AMAS"],
     historico: ["Histórico de Consultas", "Consultas realizadas nesta sessão"]
   };
 
@@ -323,6 +324,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       pageTitle.textContent = t; pageSub.textContent = s;
       if (sec === "parceria")  renderParceria();
       if (sec === "unidades")  renderUnidades();
+      if (sec === "chat")      window.chatUI?.iniciarCliente('empresario');
       if (sec === "historico") renderHistorico();
       if (window.amasSidebar) {
         window.amasSidebar.close();

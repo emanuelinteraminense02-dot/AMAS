@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="css/style.css?v=3.0">
   <link rel="stylesheet" href="css/painel.css?v=3.0">
   <link rel="stylesheet" href="css/associado.css?v=3.0">
+  <link rel="stylesheet" href="css/chat.css?v=3.0">
 </head>
 <body class="painel-body">
 
@@ -44,6 +45,10 @@
     <button class="nav-item" data-section="mensagens" id="navMensagens">
       <span class="nav-icon"><i class="bi bi-envelope"></i></span><span>Mensagens</span>
       <span class="badge-count hidden" id="badgeMensagens">0</span>
+    </button>
+    <button class="nav-item" data-section="chat" id="navChatAssociado">
+      <span class="nav-icon"><i class="bi bi-chat-dots-fill"></i></span><span>Chat com Admin</span>
+      <span class="badge-count hidden" id="badgeChatAssociado">0</span>
     </button>
     <button class="nav-item" data-section="financeiro">
       <span class="nav-icon"><i class="bi bi-credit-card"></i></span><span>Situação Financeira</span>
@@ -150,6 +155,60 @@
     <div class="card">
       <h3 class="card-title"><i class="bi bi-envelope"></i> Central de Mensagens</h3>
       <div id="listaMensagens" class="mensagens-list"></div>
+    </div>
+  </section>
+
+  <!-- ══ CHAT DIRETO COM A ADMINISTRAÇÃO ══ -->
+  <section id="sec-chat" class="painel-section hidden">
+    <div class="chat-container">
+      <main class="chat-main" style="width:100%;height:100%;">
+        <header class="chat-header">
+          <div class="chat-header-user">
+            <div class="chat-header-avatar" style="border-color:#cf941d;background:#232850;">
+              <img src="assets/logo-amas.png?v=3.0" alt="AMAS" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+            </div>
+            <div class="chat-header-details">
+              <div class="chat-header-name">
+                <span>Administração AMAS</span>
+                <span class="chat-role-pill chat-role-admin">Diretoria & Suporte</span>
+              </div>
+              <div class="chat-header-sub">
+                <span>Canal Oficial de Atendimento ao Associado</span> · <span id="userChatAdminStatus" style="color:#22c55e;"><i class="bi bi-circle-fill" style="font-size:0.55rem;"></i> Atendimento Ativo</span>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button type="button" class="btn btn-outline btn-xs" onclick="window.chatUI.atualizarMensagens()" title="Atualizar mensagens">
+              <i class="bi bi-arrow-clockwise"></i> Atualizar
+            </button>
+          </div>
+        </header>
+
+        <div style="padding:8px 18px;background:rgba(207,148,29,0.08);border-bottom:1px solid rgba(207,148,29,0.2);display:flex;align-items:center;gap:10px;font-size:0.8rem;color:#f6c86a;">
+          <i class="bi bi-lock-fill" style="color:#cf941d;font-size:0.95rem;"></i>
+          <span><strong>Canal Privado e Protegido:</strong> Suas mensagens, dúvidas e comprovantes são enviados diretamente e com exclusividade para os administradores da AMAS.</span>
+        </div>
+
+        <div class="chat-messages-area" id="userChatMessagesArea">
+          <!-- Mensagens renderizadas dinamicamente -->
+        </div>
+
+        <div class="chat-typing-indicator hidden" id="userChatTypingIndicator"></div>
+
+        <footer class="chat-footer">
+          <div id="userChatStagedAttachment" class="chat-staged-attachment" style="display:none;"></div>
+          <div class="chat-input-row">
+            <input type="file" id="userChatFileInput" style="display:none;" onchange="window.chatUI.aoSelecionarArquivo(event, 'user')">
+            <button type="button" class="chat-btn-attach" title="Anexar comprovante, PDF, imagem ou documento" onclick="document.getElementById('userChatFileInput').click()">
+              <i class="bi bi-paperclip"></i>
+            </button>
+            <textarea id="userChatInputText" class="chat-input" rows="1" placeholder="Envie sua mensagem, dúvida ou comprovante para a Administração AMAS..." onkeydown="window.chatUI.aoDigitarTexto(event, 'user')"></textarea>
+            <button type="button" class="chat-btn-send" id="userChatBtnSend" onclick="window.chatUI.enviarMensagemAtual('user')">
+              <i class="bi bi-send-fill"></i>
+            </button>
+          </div>
+        </footer>
+      </main>
     </div>
   </section>
 
@@ -573,6 +632,8 @@
 <script src="js/utils.js"></script>
 <script src="js/pdf.min.js"></script>
 <script src="js/comprovante-viewer.js"></script>
+<script src="js/chat-client.js?v=3.0"></script>
+<script src="js/chat-ui.js?v=3.0"></script>
 <script src="js/associado.js"></script>
 </body>
 </html>
