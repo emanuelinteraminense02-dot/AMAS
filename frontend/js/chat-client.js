@@ -97,6 +97,17 @@
           try {
             const data = JSON.parse(event.data);
             if (data.tipo === 'nova_mensagem') {
+              // Garante persistência instantânea no cache local
+              if (data.mensagem && data.mensagem.channelId) {
+                const m = data.mensagem;
+                const cached = this.obterCacheLocal(m.channelId);
+                if (!cached.some(item => item.id === m.id)) {
+                  cached.push(m);
+                  cached.sort((a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime());
+                  this.salvarCacheLocal(m.channelId, cached);
+                }
+              }
+
               // Toca som se a mensagem foi enviada por outra pessoa
               const currentId = this.sessao?.perfil === 'admin' ? 'admin' : (this.sessao?.perfil === 'empresario' ? `emp_${this.sessao?.id}` : `assoc_${this.sessao?.id}`);
               if (data.mensagem && data.mensagem.senderId !== currentId) {
@@ -154,27 +165,85 @@
       }
     },
 
-    // ─── Métodos HTTP com API REST ──────────────────────────────────
+    // ─── Métodos HTTP com API REST e Resiliência Anti-Perda ─────────────
+    salvarCacheLocal: function (channelId, msgs) {
+      if (!channelId || !Array.isArray(msgs)) return;
+      try {
+        localStorage.setItem(`amas_chat_cache_${channelId}`, JSON.stringify(msgs));
+      } catch (e) {
+        console.warn('Erro ao salvar cache de mensagens:', e);
+      }
+    },
+
+    obterCacheLocal: function (channelId) {
+      if (!channelId) return [];
+      try {
+        const raw = localStorage.getItem(`amas_chat_cache_${channelId}`);
+        return raw ? JSON.parse(raw) : [];
+      } catch (e) {
+        return [];
+      }
+    },
+
     carregarCanais: async function () {
       try {
         const resp = await fetch('/api/chat/canais');
         if (!resp.ok) throw new Error('Falha ao carregar canais.');
-        return await resp.json();
+        const data = await resp.json();
+        try {
+          localStorage.setItem('amas_chat_canais_cache', JSON.stringify(data));
+        } catch (_) {}
+        return data;
       } catch (e) {
-        console.error('Erro ao carregar canais do chat:', e);
+        console.warn('Erro ao carregar canais do chat, usando cache local:', e);
+        try {
+          const raw = localStorage.getItem('amas_chat_canais_cache');
+          if (raw) return JSON.parse(raw);
+        } catch (_) {}
         return { ok: false, associados: [], empresarios: [], totalNaoLidas: 0 };
       }
     },
 
     carregarMensagens: async function (channelId) {
+      const localMsgs = this.obterCacheLocal(channelId);
       try {
         const resp = await fetch(`/api/chat/mensagens/${encodeURIComponent(channelId)}`);
         if (!resp.ok) throw new Error('Falha ao carregar mensagens.');
         const data = await resp.json();
-        return data.mensagens || [];
+        const serverMsgs = data.mensagens || [];
+
+        // Mescla sem duplicidade garantindo que nenhuma mensagem seja perdida
+        const idMap = new Map();
+        serverMsgs.forEach((m) => idMap.set(m.id, m));
+
+        let localOnly = [];
+        localMsgs.forEach((m) => {
+          if (!idMap.has(m.id)) {
+            idMap.set(m.id, m);
+            localOnly.push(m);
+          }
+        });
+
+        // Se o cliente tem mensagens que o servidor não possui (ex: servidor reiniciou),
+        // envia para o backend restaurar e persistir no disco
+        if (localOnly.length > 0) {
+          fetch('/api/chat/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              channelId,
+              mensagensLocais: Array.from(idMap.values())
+            })
+          }).catch(() => {});
+        }
+
+        const merged = Array.from(idMap.values());
+        merged.sort((a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime());
+        this.salvarCacheLocal(channelId, merged);
+        return merged;
       } catch (e) {
-        console.error('Erro ao buscar histórico de mensagens:', e);
-        return [];
+        console.warn('Servidor temporariamente reiniciando, utilizando histórico local:', e);
+        return localMsgs;
       }
     },
 
@@ -206,7 +275,17 @@
         throw new Error(errData.erro || 'Falha ao enviar mensagem.');
       }
 
-      return await resp.json();
+      const result = await resp.json();
+      if (result && result.mensagem) {
+        const cached = this.obterCacheLocal(channelId);
+        if (!cached.some(m => m.id === result.mensagem.id)) {
+          cached.push(result.mensagem);
+          cached.sort((a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime());
+          this.salvarCacheLocal(channelId, cached);
+        }
+      }
+
+      return result;
     },
 
     uploadAnexo: async function (file) {
