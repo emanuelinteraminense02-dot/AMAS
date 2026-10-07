@@ -1,6 +1,7 @@
 /**
  * Cliente de Chat Oficial da AMAS (WebSocket + HTTP)
- * Gerencia conexão em tempo real, envio de anexos, notificações sonoras sintetizadas
+ * Gerencia conexão em tempo real, persistência no backend padrão (Spring Boot / Render)
+ * com fallback local, envio de anexos, notificações sonoras sintetizadas
  * e sincronização de mensagens privadas para Admin, Associado e Empresário.
  */
 (function (window) {
@@ -41,7 +42,7 @@
       osc1.stop(now + 0.45);
       osc2.stop(now + 0.45);
     } catch (e) {
-      // Ignora silenciosamente em navegadores com restrição de autoplay
+      // Ignora silenciosamente em navegadores com restrição de som
     }
   }
 
@@ -49,6 +50,7 @@
     ws: null,
     sessao: null,
     reconnectTimer: null,
+    broadcastChannel: null,
     listeners: {
       nova_mensagem: [],
       status_online: [],
@@ -59,6 +61,12 @@
     },
 
     init: function () {
+      this.atualizarSessao();
+      this.setupBroadcastChannel();
+      this.conectar();
+    },
+
+    atualizarSessao: function () {
       try {
         if (typeof getSessao === 'function') {
           this.sessao = getSessao();
@@ -69,7 +77,65 @@
       } catch (e) {
         this.sessao = null;
       }
-      this.conectar();
+      return this.sessao;
+    },
+
+    isMinhaMensagem: function (msg) {
+      if (!msg) return false;
+      this.atualizarSessao();
+      if (!this.sessao) return false;
+
+      const meuPerfil = String(this.sessao.perfil || '').toLowerCase().trim();
+      const senderPerfil = String(msg.senderPerfil || '').toLowerCase().trim();
+      const senderId = String(msg.senderId || '').trim();
+
+      // Caso 1: Admin
+      if (meuPerfil === 'admin') {
+        if (senderPerfil === 'admin' || senderId === 'admin') {
+          return true;
+        }
+      }
+
+      // Caso 2: Associado ou Empresário
+      if (meuPerfil && senderPerfil && meuPerfil === senderPerfil) {
+        const rawMeuId = String(this.sessao.id || '').replace(/^(assoc_|emp_)/, '').trim();
+        const rawSenderId = senderId.replace(/^(assoc_|emp_)/, '').trim();
+        if (rawMeuId && rawSenderId && rawMeuId === rawSenderId) {
+          return true;
+        }
+      }
+
+      // Caso 3: Comparação com currentId
+      const rawId = String(this.sessao.id || '').replace(/^(assoc_|emp_)/, '').trim();
+      const currentId = meuPerfil === 'admin'
+        ? 'admin'
+        : (meuPerfil === 'empresario' ? `emp_${rawId}` : `assoc_${rawId}`);
+
+      if (senderId && (senderId === currentId || senderId === String(this.sessao.id))) {
+        return true;
+      }
+
+      return false;
+    },
+
+    setupBroadcastChannel: function () {
+      if (typeof window.BroadcastChannel === 'function' && !this.broadcastChannel) {
+        try {
+          this.broadcastChannel = new BroadcastChannel('amas_chat_bus');
+          this.broadcastChannel.onmessage = (event) => {
+            const data = event.data;
+            if (data && data.tipo === 'nova_mensagem') {
+              const ehMinha = this.isMinhaMensagem(data.mensagem);
+              if (!ehMinha) {
+                tocarSinoNotificacao();
+              }
+              this.emit('nova_mensagem', data.mensagem);
+            } else if (data && data.tipo === 'digitando') {
+              this.emit('digitando', data);
+            }
+          };
+        } catch (_) {}
+      }
     },
 
     conectar: function () {
@@ -77,6 +143,7 @@
         return;
       }
 
+      // WebSocket tenta conectar na mesma porta do servidor se estiver rodando
       const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const wsUrl = `${proto}//${window.location.host}`;
 
@@ -84,6 +151,7 @@
         this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {
+          this.atualizarSessao();
           if (this.sessao) {
             this.ws.send(JSON.stringify({
               tipo: 'auth',
@@ -97,20 +165,18 @@
           try {
             const data = JSON.parse(event.data);
             if (data.tipo === 'nova_mensagem') {
-              // Garante persistência instantânea no cache local
               if (data.mensagem && data.mensagem.channelId) {
                 const m = data.mensagem;
                 const cached = this.obterCacheLocal(m.channelId);
-                if (!cached.some(item => item.id === m.id)) {
+                if (!cached.some(item => String(item.id) === String(m.id))) {
                   cached.push(m);
                   cached.sort((a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime());
                   this.salvarCacheLocal(m.channelId, cached);
                 }
               }
 
-              // Toca som se a mensagem foi enviada por outra pessoa
-              const currentId = this.sessao?.perfil === 'admin' ? 'admin' : (this.sessao?.perfil === 'empresario' ? `emp_${this.sessao?.id}` : `assoc_${this.sessao?.id}`);
-              if (data.mensagem && data.mensagem.senderId !== currentId) {
+              const ehMinha = this.isMinhaMensagem(data.mensagem);
+              if (!ehMinha) {
                 tocarSinoNotificacao();
               }
               this.emit('nova_mensagem', data.mensagem);
@@ -135,7 +201,6 @@
           console.warn('WebSocket chat error:', err);
         };
       } catch (e) {
-        console.error('Falha ao instanciar WebSocket:', e);
         this.agendarReconexao();
       }
     },
@@ -144,7 +209,7 @@
       if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
       this.reconnectTimer = setTimeout(() => {
         this.conectar();
-      }, 3500);
+      }, 4000);
     },
 
     on: function (evento, callback) {
@@ -165,7 +230,7 @@
       }
     },
 
-    // ─── Métodos HTTP com API REST e Resiliência Anti-Perda ─────────────
+    // ─── Resolução de URLs e Comunicação com o Backend Padrão ────────────
     salvarCacheLocal: function (channelId, msgs) {
       if (!channelId || !Array.isArray(msgs)) return;
       try {
@@ -185,17 +250,147 @@
       }
     },
 
-    carregarCanais: async function () {
+    /**
+     * Resolve a URL exata do backend (Render / Spring Boot em produção ou localhost em dev).
+     */
+    getApiUrl: function (endpoint) {
+      const cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+      let base = '';
+      if (typeof API_BASE === 'string' && API_BASE) {
+        base = API_BASE.replace(/\/$/, '');
+      } else if (window.AMAS_CONFIG && window.AMAS_CONFIG.apiBase) {
+        base = window.AMAS_CONFIG.apiBase.replace(/\/$/, '');
+      } else {
+        base = 'https://amas-m58z.onrender.com/api';
+      }
+      return `${base}${cleanEndpoint}`;
+    },
+
+    getAuthHeaders: function (extraHeaders = {}) {
+      const headers = Object.assign({ 'Content-Type': 'application/json' }, extraHeaders);
       try {
-        const resp = await fetch('/api/chat/canais');
-        if (!resp.ok) throw new Error('Falha ao carregar canais.');
-        const data = await resp.json();
+        const s = this.atualizarSessao();
+        if (s && s.token) {
+          headers['Authorization'] = 'Bearer ' + s.token;
+        }
+      } catch (_) {}
+      return headers;
+    },
+
+    /**
+     * Carrega lista de canais de associados e empresários para o Admin.
+     */
+    carregarCanais: async function () {
+      const headers = this.getAuthHeaders();
+
+      // 1. Tenta carregar do backend padrão (Render / Spring Boot)
+      try {
+        const resp = await fetch(this.getApiUrl('/chat/canais'), { headers });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data && data.ok && Array.isArray(data.associados) && Array.isArray(data.empresarios)) {
+            try { localStorage.setItem('amas_chat_canais_cache', JSON.stringify(data)); } catch (_) {}
+            return data;
+          }
+        }
+      } catch (_) {}
+
+      // 2. Tenta carregar do servidor local (/api/chat/canais) se disponível
+      try {
+        const localResp = await fetch('/api/chat/canais', { headers });
+        if (localResp.ok) {
+          const data = await localResp.json();
+          if (data && data.ok && Array.isArray(data.associados) && Array.isArray(data.empresarios)) {
+            try { localStorage.setItem('amas_chat_canais_cache', JSON.stringify(data)); } catch (_) {}
+            return data;
+          }
+        }
+      } catch (_) {}
+
+      // 3. Fallback: carrega direto das rotas /associados e /empresarios do backend
+      try {
+        let associados = [];
+        let empresarios = [];
+
         try {
-          localStorage.setItem('amas_chat_canais_cache', JSON.stringify(data));
+          const rA = await fetch(this.getApiUrl('/associados'), { headers });
+          if (rA.ok) associados = await rA.json();
         } catch (_) {}
-        return data;
-      } catch (e) {
-        console.warn('Erro ao carregar canais do chat, usando cache local:', e);
+
+        try {
+          const rE = await fetch(this.getApiUrl('/empresarios'), { headers });
+          if (rE.ok) empresarios = await rE.json();
+        } catch (_) {}
+
+        // Tenta também via funções globais do sistema se vazios
+        if ((!associados || associados.length === 0) && typeof getAssociados === 'function') {
+          try { associados = await getAssociados(); } catch (_) {}
+        }
+        if ((!empresarios || empresarios.length === 0) && typeof getEmpresarios === 'function') {
+          try { empresarios = await getEmpresarios(); } catch (_) {}
+        }
+
+        const canaisAssoc = (associados || []).map((a) => {
+          const channelId = `assoc_${a.id}`;
+          const msgs = this.obterCacheLocal(channelId);
+          const ultimaMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+          const naoLidas = msgs.filter((m) => m.senderPerfil !== 'admin' && !m.lida).length;
+
+          return {
+            id: a.id,
+            channelId,
+            tipo: 'associado',
+            nome: a.nome || 'Associado AMAS',
+            subtitulo: `Matrícula: ${a.matricula || 'AMAS-00' + a.id} · CPF: ${a.cpf || '—'}`,
+            email: a.email || '',
+            telefone: a.telefone || '',
+            status: a.status || 'Regular',
+            foto: a.foto || '',
+            ultimaMensagem: ultimaMsg ? {
+              texto: ultimaMsg.texto || (ultimaMsg.anexo ? `[Anexo: ${ultimaMsg.anexo.nome}]` : ''),
+              criadoEm: ultimaMsg.criadoEm,
+              senderPerfil: ultimaMsg.senderPerfil,
+              senderNome: ultimaMsg.senderNome
+            } : null,
+            naoLidas,
+            online: true
+          };
+        });
+
+        const canaisEmp = (empresarios || []).map((e) => {
+          const channelId = `emp_${e.id}`;
+          const msgs = this.obterCacheLocal(channelId);
+          const ultimaMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+          const naoLidas = msgs.filter((m) => m.senderPerfil !== 'admin' && !m.lida).length;
+          const logoImg = e.logo || e.foto || (e.contrato && (e.contrato.logo || e.contrato.foto)) || '';
+
+          return {
+            id: e.id,
+            channelId,
+            tipo: 'empresario',
+            nome: e.nome || 'Empresa Parceira',
+            subtitulo: `CNPJ: ${e.cnpj || '—'} · ${e.contrato?.tipoAcordo || 'Parceiro AMAS'}`,
+            email: e.email || '',
+            telefone: e.telefone || '',
+            logo: logoImg,
+            foto: logoImg,
+            ultimaMensagem: ultimaMsg ? {
+              texto: ultimaMsg.texto || (ultimaMsg.anexo ? `[Anexo: ${ultimaMsg.anexo.nome}]` : ''),
+              criadoEm: ultimaMsg.criadoEm,
+              senderPerfil: ultimaMsg.senderPerfil,
+              senderNome: ultimaMsg.senderNome
+            } : null,
+            naoLidas,
+            online: true
+          };
+        });
+
+        const totalNaoLidas = canaisAssoc.reduce((acc, c) => acc + c.naoLidas, 0) + canaisEmp.reduce((acc, c) => acc + c.naoLidas, 0);
+        const resultado = { ok: true, associados: canaisAssoc, empresarios: canaisEmp, totalNaoLidas };
+        try { localStorage.setItem('amas_chat_canais_cache', JSON.stringify(resultado)); } catch (_) {}
+        return resultado;
+      } catch (err) {
+        console.warn('Erro ao carregar canais:', err);
         try {
           const raw = localStorage.getItem('amas_chat_canais_cache');
           if (raw) return JSON.parse(raw);
@@ -204,90 +399,149 @@
       }
     },
 
+    /**
+     * Carrega histórico de mensagens de um canal.
+     */
     carregarMensagens: async function (channelId) {
-      const localMsgs = this.obterCacheLocal(channelId);
+      let localMsgs = this.obterCacheLocal(channelId);
+      const headers = this.getAuthHeaders();
+
+      // 1. Tenta carregar do backend padrão (Render / Spring Boot)
       try {
-        const resp = await fetch(`/api/chat/mensagens/${encodeURIComponent(channelId)}`);
-        if (!resp.ok) throw new Error('Falha ao carregar mensagens.');
-        const data = await resp.json();
-        const serverMsgs = data.mensagens || [];
+        const resp = await fetch(this.getApiUrl(`/chat/mensagens/${encodeURIComponent(channelId)}`), { headers });
+        if (resp.ok) {
+          const data = await resp.json();
+          const serverMsgs = data.mensagens || [];
 
-        // Mescla sem duplicidade garantindo que nenhuma mensagem seja perdida
-        const idMap = new Map();
-        serverMsgs.forEach((m) => idMap.set(m.id, m));
+          const idMap = new Map();
+          localMsgs.forEach((m) => idMap.set(String(m.id), m));
+          serverMsgs.forEach((m) => idMap.set(String(m.id), m));
 
-        let localOnly = [];
-        localMsgs.forEach((m) => {
-          if (!idMap.has(m.id)) {
-            idMap.set(m.id, m);
-            localOnly.push(m);
-          }
-        });
-
-        // Se o cliente tem mensagens que o servidor não possui (ex: servidor reiniciou),
-        // envia para o backend restaurar e persistir no disco
-        if (localOnly.length > 0) {
-          fetch('/api/chat/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              channelId,
-              mensagensLocais: Array.from(idMap.values())
-            })
-          }).catch(() => {});
+          const merged = Array.from(idMap.values());
+          merged.sort((a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime());
+          this.salvarCacheLocal(channelId, merged);
+          return merged;
         }
+      } catch (_) {}
 
-        const merged = Array.from(idMap.values());
-        merged.sort((a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime());
-        this.salvarCacheLocal(channelId, merged);
-        return merged;
-      } catch (e) {
-        console.warn('Servidor temporariamente reiniciando, utilizando histórico local:', e);
-        return localMsgs;
-      }
+      // 2. Tenta carregar do servidor local se disponível
+      try {
+        const resp = await fetch(`/api/chat/mensagens/${encodeURIComponent(channelId)}`, { headers });
+        if (resp.ok) {
+          const data = await resp.json();
+          const serverMsgs = data.mensagens || [];
+
+          const idMap = new Map();
+          localMsgs.forEach((m) => idMap.set(String(m.id), m));
+          serverMsgs.forEach((m) => idMap.set(String(m.id), m));
+
+          const merged = Array.from(idMap.values());
+          merged.sort((a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime());
+          this.salvarCacheLocal(channelId, merged);
+          return merged;
+        }
+      } catch (_) {}
+
+      return localMsgs;
     },
 
+    /**
+     * Envia e persiste mensagem no backend padrão com resiliência total.
+     */
     enviarMensagem: async function (channelId, texto, anexo) {
+      this.atualizarSessao();
       if (!this.sessao) {
         throw new Error('Sessão expirada. Faça login novamente.');
       }
+      if (!channelId) {
+        throw new Error('Nenhum canal de conversa selecionado.');
+      }
 
-      const senderId = this.sessao.perfil === 'admin' ? 'admin' : (this.sessao.perfil === 'empresario' ? `emp_${this.sessao.id}` : `assoc_${this.sessao.id}`);
-      const senderNome = this.sessao.perfil === 'admin' ? 'Administração AMAS' : (this.sessao.nome || 'Usuário');
+      const perfil = this.sessao.perfil || 'associado';
+      const rawId = String(this.sessao.id || '').replace(/^(assoc_|emp_)/, '');
+      const senderId = perfil === 'admin'
+        ? 'admin'
+        : (perfil === 'empresario' ? `emp_${rawId}` : `assoc_${rawId}`);
+      const senderNome = perfil === 'admin'
+        ? 'Administração AMAS'
+        : (this.sessao.nome || (perfil === 'empresario' ? 'Empresa Parceira' : 'Associado AMAS'));
 
       const payload = {
+        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
         channelId,
-        texto,
+        texto: (texto || '').trim(),
         anexo: anexo || null,
         senderId,
         senderNome,
-        senderPerfil: this.sessao.perfil || 'associado'
+        senderPerfil: perfil,
+        criadoEm: new Date().toISOString(),
+        lida: false
       };
 
-      const resp = await fetch('/api/chat/mensagens', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      const headers = this.getAuthHeaders();
+      let persistiuNoBackend = false;
 
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.erro || 'Falha ao enviar mensagem.');
-      }
-
-      const result = await resp.json();
-      if (result && result.mensagem) {
-        const cached = this.obterCacheLocal(channelId);
-        if (!cached.some(m => m.id === result.mensagem.id)) {
-          cached.push(result.mensagem);
-          cached.sort((a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime());
-          this.salvarCacheLocal(channelId, cached);
+      // 1. Envia para o backend padrão (Render / Spring Boot)
+      try {
+        const primaryUrl = this.getApiUrl('/chat/mensagens');
+        const resp = await fetch(primaryUrl, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload)
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data && data.mensagem) {
+            payload.id = data.mensagem.id || payload.id;
+            persistiuNoBackend = true;
+          }
         }
+      } catch (err) {
+        console.warn('Aviso: envio primário ao backend padrão oscilou, tentando rota alternativa...', err);
       }
 
-      return result;
+      // 2. Se o primário falhou e for URL remota, tenta envio na rota local
+      if (!persistiuNoBackend) {
+        try {
+          const localResp = await fetch('/api/chat/mensagens', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(payload)
+          });
+          if (localResp.ok) {
+            const data = await localResp.json();
+            if (data && data.mensagem) {
+              payload.id = data.mensagem.id || payload.id;
+              persistiuNoBackend = true;
+            }
+          }
+        } catch (_) {}
+      }
+
+      // 3. Salva no cache local (garante que a mensagem apareça instantaneamente)
+      const cached = this.obterCacheLocal(channelId);
+      if (!cached.some(m => String(m.id) === String(payload.id))) {
+        cached.push(payload);
+        cached.sort((a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime());
+        this.salvarCacheLocal(channelId, cached);
+      }
+
+      // 4. Sincroniza via BroadcastChannel com outras abas
+      if (this.broadcastChannel) {
+        try {
+          this.broadcastChannel.postMessage({
+            tipo: 'nova_mensagem',
+            mensagem: payload
+          });
+        } catch (_) {}
+      }
+
+      return { ok: true, mensagem: payload, salvoNoServidor: persistiuNoBackend };
     },
 
+    /**
+     * Processa upload de anexos (imagens, PDFs e documentos).
+     */
     uploadAnexo: async function (file) {
       return new Promise((resolve, reject) => {
         if (!file) return reject(new Error('Nenhum arquivo selecionado.'));
@@ -297,51 +551,104 @@
 
         const reader = new FileReader();
         reader.onload = async () => {
+          const base64 = reader.result;
+          const ext = file.name.split('.').pop().toLowerCase();
+          let tipo = 'arquivo';
+          if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'].includes(ext)) tipo = 'imagem';
+          else if (ext === 'pdf') tipo = 'pdf';
+          else if (['doc', 'docx', 'odt', 'txt'].includes(ext)) tipo = 'documento';
+
+          const anexoObj = {
+            nome: file.name,
+            url: base64,
+            tipo,
+            tamanho: file.size
+          };
+
+          const headers = this.getAuthHeaders();
+
+          // Tenta enviar para o backend
           try {
-            const base64 = reader.result;
-            const resp = await fetch('/api/chat/upload', {
+            const resp = await fetch(this.getApiUrl('/chat/upload'), {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers,
               body: JSON.stringify({
                 nomeArquivo: file.name,
                 base64: base64,
-                tamanho: file.size
+                tamanho: file.size,
+                tipo
               })
             });
-            if (!resp.ok) throw new Error('Falha no upload do anexo.');
-            const data = await resp.json();
-            resolve(data.anexo);
-          } catch (err) {
-            reject(err);
-          }
+            if (resp.ok) {
+              const data = await resp.json();
+              if (data && data.anexo) {
+                return resolve(data.anexo);
+              }
+            }
+          } catch (_) {}
+
+          // Retorno imediato resiliente
+          resolve(anexoObj);
         };
         reader.onerror = () => reject(new Error('Falha ao ler o arquivo.'));
         reader.readAsDataURL(file);
       });
     },
 
+    /**
+     * Marca mensagens como lidas.
+     */
     marcarLidas: async function (channelId) {
-      if (!this.sessao || !channelId) return;
+      if (!channelId) return;
+      this.atualizarSessao();
+      const perfil = this.sessao?.perfil || 'admin';
+      const headers = this.getAuthHeaders();
+
       try {
-        await fetch(`/api/chat/mensagens/${encodeURIComponent(channelId)}/lidas`, {
+        await fetch(this.getApiUrl(`/chat/mensagens/${encodeURIComponent(channelId)}/lidas`), {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ leitorPerfil: this.sessao.perfil })
+          headers,
+          body: JSON.stringify({ leitorPerfil: perfil })
         });
-      } catch (e) {
-        // Ignora falha de background
+      } catch (_) {
+        try {
+          await fetch(`/api/chat/mensagens/${encodeURIComponent(channelId)}/lidas`, {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify({ leitorPerfil: perfil })
+          });
+        } catch (_) {}
+      }
+
+      const cached = this.obterCacheLocal(channelId);
+      let alterou = false;
+      cached.forEach(m => {
+        if (!m.lida) {
+          m.lida = true;
+          alterou = true;
+        }
+      });
+      if (alterou) {
+        this.salvarCacheLocal(channelId, cached);
       }
     },
 
     notificarDigitando: function (channelId, isTyping) {
-      if (this.ws && this.ws.readyState === WebSocket.OPEN && this.sessao) {
-        this.ws.send(JSON.stringify({
-          tipo: 'digitando',
-          channelId,
-          senderPerfil: this.sessao.perfil,
-          senderNome: this.sessao.perfil === 'admin' ? 'Administração' : this.sessao.nome,
-          isTyping: !!isTyping
-        }));
+      this.atualizarSessao();
+      if (!this.sessao) return;
+      const payload = {
+        tipo: 'digitando',
+        channelId,
+        senderPerfil: this.sessao.perfil,
+        senderNome: this.sessao.perfil === 'admin' ? 'Administração AMAS' : this.sessao.nome,
+        isTyping: !!isTyping
+      };
+
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        try { this.ws.send(JSON.stringify(payload)); } catch (_) {}
+      }
+      if (this.broadcastChannel) {
+        try { this.broadcastChannel.postMessage(payload); } catch (_) {}
       }
     },
 

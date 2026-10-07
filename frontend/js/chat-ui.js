@@ -1,8 +1,8 @@
 /**
  * Interface do Usuário do Chat AMAS (chat-ui.js)
  * Orquestra as telas de Atendimento Privado para Admin, Associado e Empresário.
- * Suporta separação em abas, busca instantânea, histórico persistente,
- * envio de documentos/imagens/PDFs com prévia e sincronização em tempo real via WebSocket.
+ * Suporta separação em abas, busca instantânea em todo o catálogo (novos chats e existentes),
+ * histórico persistente, envio de anexos com prévia e sincronização em tempo real.
  */
 (function (window) {
   'use strict';
@@ -25,6 +25,27 @@
     },
 
     init: function () {
+      this.atualizarSessao();
+      if (!this.sessao) return;
+
+      const perfil = this.sessao.perfil;
+      if (perfil === 'admin') {
+        this.modo = 'admin';
+        this.setupListenersGlobais();
+      } else if (perfil === 'empresario') {
+        this.modo = 'empresario';
+        const rawId = String(this.sessao.id || '').replace(/^(emp_|assoc_)/, '');
+        this.clientState.channelId = `emp_${rawId}`;
+        this.setupListenersGlobais();
+      } else {
+        this.modo = 'associado';
+        const rawId = String(this.sessao.id || '').replace(/^(emp_|assoc_)/, '');
+        this.clientState.channelId = `assoc_${rawId}`;
+        this.setupListenersGlobais();
+      }
+    },
+
+    atualizarSessao: function () {
       try {
         if (typeof getSessao === 'function') {
           this.sessao = getSessao();
@@ -35,48 +56,27 @@
       } catch (e) {
         this.sessao = null;
       }
-
-      if (!this.sessao) return;
-
-      const perfil = this.sessao.perfil;
-      if (perfil === 'admin') {
-        this.modo = 'admin';
-        this.setupListenersGlobais();
-      } else if (perfil === 'empresario') {
-        this.modo = 'empresario';
-        const rawId = String(this.sessao.id || '').replace(/^emp_/, '');
-        this.clientState.channelId = `emp_${rawId}`;
-        this.setupListenersGlobais();
-      } else {
-        this.modo = 'associado';
-        const rawId = String(this.sessao.id || '').replace(/^assoc_/, '');
-        this.clientState.channelId = `assoc_${rawId}`;
-        this.setupListenersGlobais();
-      }
+      return this.sessao;
     },
 
     setupListenersGlobais: function () {
       if (!window.ChatClient) return;
 
-      // Evento de nova mensagem recebida em tempo real
       window.ChatClient.on('nova_mensagem', (msg) => {
         this.aoReceberNovaMensagem(msg);
       });
 
-      // Evento de digitando
       window.ChatClient.on('digitando', (data) => {
         this.aoReceberDigitando(data);
       });
 
-      // Evento de status online
       window.ChatClient.on('status_online', (data) => {
         this.aoAtualizarStatusOnline(data);
       });
 
-      // Atualiza badge inicial após conectar
       setTimeout(() => {
         this.atualizarBadgesGlobais();
-      }, 600);
+      }, 500);
     },
 
     // ══════════════════════════════════════════════════════════════════
@@ -89,22 +89,98 @@
 
     carregarCanaisAdmin: async function () {
       const listEl = document.getElementById('chatContactsList');
-      if (listEl && listEl.children.length === 0) {
+      if (listEl && (!listEl.children || listEl.children.length === 0)) {
         listEl.innerHTML = `
-          <div style="padding:24px;text-align:center;color:#94a3b8;font-size:0.85rem;">
-            <i class="bi bi-arrow-repeat spin" style="font-size:1.4rem;color:#cf941d;display:block;margin-bottom:8px;"></i>
-            Carregando conversas...
+          <div style="padding:28px 16px;text-align:center;color:#94a3b8;font-size:0.85rem;">
+            <i class="bi bi-arrow-repeat spin" style="font-size:1.6rem;color:#cf941d;display:block;margin-bottom:8px;"></i>
+            Carregando catálogo de conversas...
           </div>
         `;
       }
 
-      const res = await window.ChatClient.carregarCanais();
-      if (res && res.ok) {
-        this.adminState.canais.associados = res.associados || [];
-        this.adminState.canais.empresarios = res.empresarios || [];
-        this.atualizarContadoresAbasAdmin(res);
-        this.renderizarListaContatosAdmin();
+      // 1. Carrega canais existentes do ChatClient
+      let res = await window.ChatClient.carregarCanais();
+      if (!res) res = { ok: true, associados: [], empresarios: [], totalNaoLidas: 0 };
+
+      // 2. Sincroniza complementarmente com todo o diretório de Associados e Empresários
+      try {
+        let assocDb = [];
+        let empDb = [];
+
+        if (typeof apiAssociados !== 'undefined' && typeof apiAssociados.listar === 'function') {
+          try { assocDb = await apiAssociados.listar(); } catch (_) {}
+        } else if (typeof getAssociados === 'function') {
+          try { assocDb = await getAssociados(); } catch (_) {}
+        }
+
+        if (typeof apiEmpresarios !== 'undefined' && typeof apiEmpresarios.listar === 'function') {
+          try { empDb = await apiEmpresarios.listar(); } catch (_) {}
+        } else if (typeof getEmpresarios === 'function') {
+          try { empDb = await getEmpresarios(); } catch (_) {}
+        }
+
+        // Garante que TODOS os associados cadastrados existam na lista
+        if (Array.isArray(assocDb) && assocDb.length > 0) {
+          const mapAssoc = new Map();
+          (res.associados || []).forEach(a => mapAssoc.set(a.channelId, a));
+
+          assocDb.forEach(a => {
+            const chId = 'assoc_' + a.id;
+            if (!mapAssoc.has(chId)) {
+              mapAssoc.set(chId, {
+                id: a.id,
+                channelId: chId,
+                tipo: 'associado',
+                nome: a.nome || 'Associado AMAS',
+                subtitulo: `Matrícula: ${a.matricula || 'AMAS-00' + a.id} · CPF: ${a.cpf || '—'}`,
+                email: a.email || '',
+                telefone: a.telefone || '',
+                status: a.status || 'Regular',
+                foto: a.foto || '',
+                ultimaMensagem: null,
+                naoLidas: 0,
+                online: true
+              });
+            }
+          });
+          res.associados = Array.from(mapAssoc.values());
+        }
+
+        // Garante que TODOS os empresários cadastrados existam na lista
+        if (Array.isArray(empDb) && empDb.length > 0) {
+          const mapEmp = new Map();
+          (res.empresarios || []).forEach(e => mapEmp.set(e.channelId, e));
+
+          empDb.forEach(e => {
+            const chId = 'emp_' + e.id;
+            if (!mapEmp.has(chId)) {
+              const logoImg = e.logo || e.foto || (e.contrato && (e.contrato.logo || e.contrato.foto)) || '';
+              mapEmp.set(chId, {
+                id: e.id,
+                channelId: chId,
+                tipo: 'empresario',
+                nome: e.nome || 'Empresa Parceira',
+                subtitulo: `CNPJ: ${e.cnpj || '—'} · ${e.contrato?.tipoAcordo || 'Parceiro AMAS'}`,
+                email: e.email || '',
+                telefone: e.telefone || '',
+                logo: logoImg,
+                foto: logoImg,
+                ultimaMensagem: null,
+                naoLidas: 0,
+                online: true
+              });
+            }
+          });
+          res.empresarios = Array.from(mapEmp.values());
+        }
+      } catch (syncErr) {
+        console.warn('Sincronização de canais:', syncErr);
       }
+
+      this.adminState.canais.associados = res.associados || [];
+      this.adminState.canais.empresarios = res.empresarios || [];
+      this.atualizarContadoresAbasAdmin(res);
+      this.renderizarListaContatosAdmin();
     },
 
     atualizarContadoresAbasAdmin: function (res) {
@@ -153,85 +229,154 @@
       this.renderizarListaContatosAdmin();
     },
 
+    renderizarCardContato: function (c) {
+      const isActive = this.adminState.canalSelecionado?.channelId === c.channelId;
+      const hora = c.ultimaMensagem?.criadoEm ? window.ChatClient.formatarHora(c.ultimaMensagem.criadoEm) : '';
+      const ultimaTxt = c.ultimaMensagem?.texto
+        ? (c.ultimaMensagem.senderPerfil === 'admin' ? `Você: ${c.ultimaMensagem.texto}` : c.ultimaMensagem.texto)
+        : '<span style="color:#cf941d;font-style:italic;"><i class="bi bi-chat-plus"></i> Iniciar nova conversa</span>';
+
+      const avatarImg = c.foto || c.logo;
+      const avatarHtml = avatarImg
+        ? `<img src="${avatarImg}" alt="${window.ChatClient.escapeHtml(c.nome)}">`
+        : (c.tipo === 'empresario' ? '<i class="bi bi-building"></i>' : '<i class="bi bi-person"></i>');
+
+      const roleBadge = c.tipo === 'empresario'
+        ? '<span class="chat-role-pill chat-role-emp" style="font-size:0.65rem;margin-left:4px;">Empresa</span>'
+        : '<span class="chat-role-pill chat-role-assoc" style="font-size:0.65rem;margin-left:4px;">Associado</span>';
+
+      return `
+        <div class="chat-contact-item ${isActive ? 'active' : ''}" onclick="window.chatUI.selecionarCanalAdmin('${c.channelId}')">
+          <div class="chat-contact-avatar">
+            ${avatarHtml}
+            ${c.online ? '<span class="chat-online-dot" title="Online agora"></span>' : ''}
+          </div>
+          <div class="chat-contact-info">
+            <div class="chat-contact-top">
+              <div class="chat-contact-name">
+                ${window.ChatClient.escapeHtml(c.nome)}
+                ${roleBadge}
+              </div>
+              <div class="chat-contact-time">${hora}</div>
+            </div>
+            <div class="chat-contact-sub">${window.ChatClient.escapeHtml(c.subtitulo)}</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
+              <div class="chat-contact-last-msg">${ultimaTxt}</div>
+              ${c.naoLidas > 0 ? `<span class="chat-contact-badge">${c.naoLidas}</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+    },
+
     renderizarListaContatosAdmin: function () {
       const listEl = document.getElementById('chatContactsList');
       if (!listEl) return;
 
+      const filtro = this.adminState.filtro;
+
+      // ── MODO BUSCA (procura em Associados E Empresários para permitir abrir qualquer chat) ──
+      if (filtro) {
+        const matchesAssoc = (this.adminState.canais.associados || []).filter((c) => {
+          const nome = (c.nome || '').toLowerCase();
+          const sub = (c.subtitulo || '').toLowerCase();
+          const email = (c.email || '').toLowerCase();
+          const tel = (c.telefone || '').toLowerCase();
+          return nome.includes(filtro) || sub.includes(filtro) || email.includes(filtro) || tel.includes(filtro);
+        });
+
+        const matchesEmp = (this.adminState.canais.empresarios || []).filter((c) => {
+          const nome = (c.nome || '').toLowerCase();
+          const sub = (c.subtitulo || '').toLowerCase();
+          const email = (c.email || '').toLowerCase();
+          const tel = (c.telefone || '').toLowerCase();
+          return nome.includes(filtro) || sub.includes(filtro) || email.includes(filtro) || tel.includes(filtro);
+        });
+
+        const totalEncontrados = matchesAssoc.length + matchesEmp.length;
+
+        if (totalEncontrados === 0) {
+          listEl.innerHTML = `
+            <div style="padding:32px 16px;text-align:center;color:#94a3b8;font-size:0.85rem;">
+              <i class="bi bi-search" style="font-size:1.8rem;opacity:0.35;display:block;margin-bottom:8px;"></i>
+              Nenhum associado ou empresário encontrado para "<strong>${window.ChatClient.escapeHtml(filtro)}</strong>".
+              <p style="font-size:0.75rem;margin-top:6px;opacity:0.75;">Verifique a grafia do nome, CPF, CNPJ ou matrícula.</p>
+            </div>
+          `;
+          return;
+        }
+
+        let html = '';
+
+        if (matchesAssoc.length > 0) {
+          html += `
+            <div class="chat-search-category-header">
+              <i class="bi bi-people-fill"></i> Associados (${matchesAssoc.length})
+            </div>
+          `;
+          html += matchesAssoc.map(c => this.renderizarCardContato(c)).join('');
+        }
+
+        if (matchesEmp.length > 0) {
+          html += `
+            <div class="chat-search-category-header">
+              <i class="bi bi-building"></i> Empresas Parceiras (${matchesEmp.length})
+            </div>
+          `;
+          html += matchesEmp.map(c => this.renderizarCardContato(c)).join('');
+        }
+
+        listEl.innerHTML = html;
+        return;
+      }
+
+      // ── MODO NORMAL (lista da aba ativa) ──
       const lista = this.adminState.abaAtiva === 'associados'
         ? this.adminState.canais.associados
         : this.adminState.canais.empresarios;
 
-      const filtro = this.adminState.filtro;
-      const filtrados = lista.filter((c) => {
-        if (!filtro) return true;
-        const nome = (c.nome || '').toLowerCase();
-        const sub = (c.subtitulo || '').toLowerCase();
-        const email = (c.email || '').toLowerCase();
-        return nome.includes(filtro) || sub.includes(filtro) || email.includes(filtro);
-      });
-
-      if (filtrados.length === 0) {
+      if (!lista || lista.length === 0) {
         listEl.innerHTML = `
           <div style="padding:32px 16px;text-align:center;color:#94a3b8;font-size:0.85rem;">
             <i class="bi bi-inbox" style="font-size:1.8rem;opacity:0.4;display:block;margin-bottom:8px;"></i>
-            Nenhum contato encontrado em ${this.adminState.abaAtiva === 'associados' ? 'Associados' : 'Empresários'}.
+            Nenhum contato cadastrado em ${this.adminState.abaAtiva === 'associados' ? 'Associados' : 'Empresários'}.
           </div>
         `;
         return;
       }
 
-      listEl.innerHTML = filtrados.map((c) => {
-        const isActive = this.adminState.canalSelecionado?.channelId === c.channelId;
-        const hora = c.ultimaMensagem?.criadoEm ? window.ChatClient.formatarHora(c.ultimaMensagem.criadoEm) : '';
-        const ultimaTxt = c.ultimaMensagem?.texto
-          ? (c.ultimaMensagem.senderPerfil === 'admin' ? `Você: ${c.ultimaMensagem.texto}` : c.ultimaMensagem.texto)
-          : 'Iniciar conversa privada...';
-
-        const avatarImg = c.foto || c.logo;
-        const avatarHtml = avatarImg
-          ? `<img src="${avatarImg}" alt="${window.ChatClient.escapeHtml(c.nome)}">`
-          : (c.tipo === 'empresario' ? '<i class="bi bi-building"></i>' : '<i class="bi bi-person"></i>');
-
-        return `
-          <div class="chat-contact-item ${isActive ? 'active' : ''}" onclick="window.chatUI.selecionarCanalAdmin('${c.channelId}')">
-            <div class="chat-contact-avatar">
-              ${avatarHtml}
-              ${c.online ? '<span class="chat-online-dot" title="Online agora"></span>' : ''}
-            </div>
-            <div class="chat-contact-info">
-              <div class="chat-contact-top">
-                <div class="chat-contact-name">${window.ChatClient.escapeHtml(c.nome)}</div>
-                <div class="chat-contact-time">${hora}</div>
-              </div>
-              <div class="chat-contact-sub">${window.ChatClient.escapeHtml(c.subtitulo)}</div>
-              <div style="display:flex;align-items:center;justify-content:space-between;">
-                <div class="chat-contact-last-msg">${window.ChatClient.escapeHtml(ultimaTxt)}</div>
-                ${c.naoLidas > 0 ? `<span class="chat-contact-badge">${c.naoLidas}</span>` : ''}
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
+      listEl.innerHTML = lista.map(c => this.renderizarCardContato(c)).join('');
     },
 
     selecionarCanalAdmin: async function (channelId) {
-      const todos = [...this.adminState.canais.associados, ...this.adminState.canais.empresarios];
+      const todos = [...(this.adminState.canais.associados || []), ...(this.adminState.canais.empresarios || [])];
       const contato = todos.find((c) => c.channelId === channelId);
       if (!contato) return;
 
       this.adminState.canalSelecionado = contato;
       contato.naoLidas = 0;
 
+      // Sincroniza aba ativa se o contato selecionado for de outra categoria
+      if (contato.tipo === 'empresario' && this.adminState.abaAtiva !== 'empresarios') {
+        this.adminState.abaAtiva = 'empresarios';
+        document.getElementById('chatTabEmp')?.classList.add('active');
+        document.getElementById('chatTabAssoc')?.classList.remove('active');
+      } else if (contato.tipo === 'associado' && this.adminState.abaAtiva !== 'associados') {
+        this.adminState.abaAtiva = 'associados';
+        document.getElementById('chatTabAssoc')?.classList.add('active');
+        document.getElementById('chatTabEmp')?.classList.remove('active');
+      }
+
       // Zera contador daquele contato e sincroniza com backend
       window.ChatClient.marcarLidas(channelId);
       this.atualizarContadoresAbasAdmin(this.adminState.canais);
       this.renderizarListaContatosAdmin();
 
-      // Alterna exibição do container em telas mobile
+      // Mobile: alterna para conversa
       const container = document.querySelector('.chat-container');
       if (container) container.classList.add('chat-active-mobile');
 
-      // Exibe painel ativo e oculta o empty state
+      // Exibe painel ativo e oculta empty state
       const emptyEl = document.getElementById('chatEmptyState');
       const activeEl = document.getElementById('chatActivePanel');
       if (emptyEl) emptyEl.style.display = 'none';
@@ -267,14 +412,12 @@
       }
 
       if (statusEl) {
-        statusEl.innerHTML = contato.online
-          ? '<i class="bi bi-circle-fill" style="font-size:0.55rem;color:#22c55e;"></i> Online agora'
-          : '<i class="bi bi-circle" style="font-size:0.55rem;color:#94a3b8;"></i> Offline';
+        statusEl.innerHTML = '<i class="bi bi-circle-fill" style="font-size:0.55rem;color:#22c55e;"></i> Online agora';
       }
 
       // Carrega e renderiza mensagens
       await this.carregarMensagensDoCanal(channelId, 'chatMessagesArea');
-      
+
       const inputEl = document.getElementById('chatInputText');
       if (inputEl) inputEl.focus();
     },
@@ -289,6 +432,7 @@
     // ══════════════════════════════════════════════════════════════════
     iniciarCliente: async function (tipo) {
       this.modo = tipo; // 'associado' ou 'empresario'
+      this.atualizarSessao();
       const rawId = String(this.sessao?.id || '').replace(/^(assoc_|emp_)/, '');
       this.clientState.channelId = tipo === 'empresario' ? `emp_${rawId}` : `assoc_${rawId}`;
 
@@ -323,12 +467,16 @@
       if (!container) return;
 
       if (!msgs || msgs.length === 0) {
+        const contato = this.adminState.canalSelecionado;
+        const nomeDestino = contato ? contato.nome : 'Administração AMAS';
+
         container.innerHTML = `
           <div class="chat-empty-state">
             <div class="chat-empty-icon"><i class="bi bi-shield-check"></i></div>
-            <h4 style="color:#fff;margin-bottom:6px;font-weight:700;">Atendimento Privado Iniciado</h4>
-            <p style="font-size:0.85rem;color:#94a3b8;max-width:380px;">
-              Este canal é estritamente confidencial. Envie mensagens, dúvidas ou documentos e o suporte da AMAS responderá prontamente.
+            <h4 style="color:#fff;margin-bottom:6px;font-weight:700;">Atendimento Privado AMAS</h4>
+            <p style="font-size:0.85rem;color:#94a3b8;max-width:400px;line-height:1.5;">
+              Este canal é estritamente confidencial com <strong>${window.ChatClient.escapeHtml(nomeDestino)}</strong>.
+              Envie uma mensagem abaixo para iniciar a conversa em tempo real.
             </p>
           </div>
         `;
@@ -337,6 +485,7 @@
 
       let html = '';
       let ultimaData = '';
+      this.atualizarSessao();
       const meuPerfil = this.sessao?.perfil;
 
       msgs.forEach((m) => {
@@ -382,15 +531,14 @@
       const container = document.getElementById(containerId);
       if (!container) return;
 
-      // Remove empty state se for a primeira mensagem
       const emptyEl = container.querySelector('.chat-empty-state');
       if (emptyEl) {
         container.innerHTML = '';
       }
 
-      // Evita duplicatas se já existe no DOM
       if (document.getElementById(`msgRow_${msg.id}`)) return;
 
+      this.atualizarSessao();
       const meuPerfil = this.sessao?.perfil;
       const isSent = (meuPerfil === 'admin' && msg.senderPerfil === 'admin') ||
                      (meuPerfil !== 'admin' && msg.senderPerfil !== 'admin');
@@ -418,6 +566,21 @@
 
       container.appendChild(div);
       this.rolarAteOFim(container);
+    },
+
+    atualizarUltimaMensagemNaLista: function (channelId, msg) {
+      if (!channelId || !msg) return;
+      const todos = [...(this.adminState.canais.associados || []), ...(this.adminState.canais.empresarios || [])];
+      const contato = todos.find(c => c.channelId === channelId);
+      if (contato) {
+        contato.ultimaMensagem = {
+          texto: msg.texto || (msg.anexo ? `[Anexo: ${msg.anexo.nome}]` : ''),
+          criadoEm: msg.criadoEm,
+          senderPerfil: msg.senderPerfil,
+          senderNome: msg.senderNome
+        };
+        this.renderizarListaContatosAdmin();
+      }
     },
 
     rolarAteOFim: function (container) {
@@ -489,7 +652,6 @@
 
       if (!channelId) return;
 
-      // Dispara evento de digitação com debounce
       window.ChatClient.notificarDigitando(channelId, true);
       const stateObj = this.modo === 'admin' ? this.adminState : this.clientState;
       if (stateObj.typingTimeout) clearTimeout(stateObj.typingTimeout);
@@ -497,7 +659,6 @@
         window.ChatClient.notificarDigitando(channelId, false);
       }, 2500);
 
-      // Envia com Enter (sem Shift)
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         this.enviarMensagemAtual(tipo);
@@ -526,7 +687,6 @@
 
       if (!texto && !file) return;
 
-      // Desabilita botão durante envio
       if (btnSend) {
         btnSend.disabled = true;
         btnSend.innerHTML = '<i class="bi bi-arrow-repeat spin"></i>';
@@ -540,7 +700,6 @@
 
         const res = await window.ChatClient.enviarMensagem(channelId, texto, anexoObj);
 
-        // Limpa campos
         if (inputEl) {
           inputEl.value = '';
           inputEl.style.height = 'auto';
@@ -548,19 +707,23 @@
         if (fileInput) fileInput.value = '';
         this.removerAnexoStaged(tipo);
 
-        // Se por algum motivo o WebSocket estiver offline, adiciona otimisticamente
         if (res && res.mensagem) {
           const containerId = this.modo === 'admin'
             ? 'chatMessagesArea'
             : (this.modo === 'empresario' ? 'empChatMessagesArea' : 'userChatMessagesArea');
           this.adicionarMensagemAoDOM(containerId, res.mensagem);
+
+          if (this.modo === 'admin') {
+            this.atualizarUltimaMensagemNaLista(channelId, res.mensagem);
+          }
         }
       } catch (err) {
         console.error('Erro ao enviar mensagem no chat:', err);
+        const errMsg = err?.message || 'Falha ao enviar mensagem.';
         if (typeof showToast === 'function') {
-          showToast(err.message || 'Falha ao enviar mensagem.', 'error');
+          showToast(errMsg, 'error');
         } else {
-          alert(err.message || 'Falha ao enviar mensagem.');
+          alert(errMsg);
         }
       } finally {
         if (btnSend) {
@@ -576,27 +739,36 @@
     aoReceberNovaMensagem: function (msg) {
       if (!msg) return;
 
-      // Se for no Admin:
+      const isMinha = window.ChatClient && typeof window.ChatClient.isMinhaMensagem === 'function'
+        ? window.ChatClient.isMinhaMensagem(msg)
+        : false;
+
       if (this.modo === 'admin') {
         const canalAtual = this.adminState.canalSelecionado?.channelId;
 
-        // Se a conversa aberta for a mesma da mensagem, renderiza imediatamente
         if (canalAtual === msg.channelId) {
           this.adicionarMensagemAoDOM('chatMessagesArea', msg);
-          window.ChatClient.marcarLidas(canalAtual);
+          if (!isMinha) {
+            window.ChatClient.marcarLidas(canalAtual);
+          }
         }
 
-        // Atualiza a lista de contatos em segundo plano
-        this.carregarCanaisAdmin();
+        this.atualizarUltimaMensagemNaLista(msg.channelId, msg);
+
+        // Se a mensagem veio de outra pessoa, atualiza a lista e contadores
+        if (!isMinha) {
+          this.carregarCanaisAdmin();
+        }
         return;
       }
 
-      // Se for no Associado ou Empresário:
       if (msg.channelId === this.clientState.channelId) {
         const containerId = this.modo === 'empresario' ? 'empChatMessagesArea' : 'userChatMessagesArea';
         this.adicionarMensagemAoDOM(containerId, msg);
 
-        // Se a seção do chat estiver ativa, marca como lida
+        // Mensagem enviada por mim mesmo nunca deve disparar notificação nem incrementar badge
+        if (isMinha) return;
+
         const secChat = document.getElementById('sec-chat');
         if (secChat && !secChat.classList.contains('hidden')) {
           window.ChatClient.marcarLidas(this.clientState.channelId);
@@ -637,7 +809,7 @@
       if (!data || !data.channelId) return;
 
       if (this.modo === 'admin') {
-        const todos = [...this.adminState.canais.associados, ...this.adminState.canais.empresarios];
+        const todos = [...(this.adminState.canais.associados || []), ...(this.adminState.canais.empresarios || [])];
         const contato = todos.find((c) => c.channelId === data.channelId);
         if (contato) {
           contato.online = !!data.online;
