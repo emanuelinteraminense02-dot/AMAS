@@ -47,6 +47,15 @@ public class ChatService {
     }
 
     /**
+    public static boolean isMsgAdmin(ChatMensagem m) {
+        if (m == null) return false;
+        String perfil = m.getSenderPerfil() != null ? m.getSenderPerfil().trim().toLowerCase() : "";
+        String id = m.getSenderId() != null ? m.getSenderId().trim().toLowerCase() : "";
+        String nome = m.getSenderNome() != null ? m.getSenderNome().trim().toLowerCase() : "";
+        return "admin".equals(perfil) || "administrador".equals(perfil) || "admin".equals(id) || nome.contains("administra");
+    }
+
+    /**
      * Salva nova mensagem no banco de dados.
      */
     @Transactional
@@ -64,6 +73,15 @@ public class ChatService {
         String senderNome = (String) payload.getOrDefault("senderNome", "Usuário");
         String senderPerfil = (String) payload.getOrDefault("senderPerfil", "associado");
         String texto = (String) payload.getOrDefault("texto", "");
+
+        // Normalização garantida: se perfil ou id for admin, padroniza
+        if ("admin".equalsIgnoreCase(senderPerfil) || "admin".equalsIgnoreCase(senderId) || senderNome.toLowerCase().contains("administra")) {
+            senderPerfil = "admin";
+            senderId = "admin";
+            if (senderNome == null || senderNome.isBlank() || "Usuário".equals(senderNome)) {
+                senderNome = "Administração AMAS";
+            }
+        }
 
         String anexoNome = null;
         String anexoUrl = null;
@@ -102,13 +120,43 @@ public class ChatService {
     }
 
     /**
-     * Marca mensagens do canal como lidas pelo leitor.
+     * Marca mensagens do canal como lidas pelo leitor com persistência absoluta.
      */
     @Transactional
     public void marcarLidas(String channelId, String leitorPerfil) {
         if (channelId == null || channelId.isBlank()) return;
-        String perfil = (leitorPerfil != null && !leitorPerfil.isBlank()) ? leitorPerfil : "admin";
-        chatMensagemRepository.marcarComoLidas(channelId, perfil);
+        String perfil = (leitorPerfil != null && !leitorPerfil.isBlank()) ? leitorPerfil.trim().toLowerCase() : "admin";
+
+        // Executa atualização no banco via query SQL
+        try {
+            chatMensagemRepository.marcarComoLidas(channelId, perfil);
+        } catch (Exception e) {
+            log.warn("[CHAT] Aviso ao executar query direta de marcarComoLidas: {}", e.getMessage());
+        }
+
+        // Executa também varredura direta via entidades para garantir 100% de consistência
+        try {
+            List<ChatMensagem> msgs = chatMensagemRepository.findByChannelIdOrderByCriadoEmAsc(channelId);
+            boolean alterou = false;
+            boolean isAdminLeitor = "admin".equals(perfil) || "administrador".equals(perfil);
+
+            for (ChatMensagem m : msgs) {
+                boolean msgDeAdmin = isMsgAdmin(m);
+                if (isAdminLeitor && !msgDeAdmin && !Boolean.TRUE.equals(m.getLida())) {
+                    m.setLida(true);
+                    alterou = true;
+                } else if (!isAdminLeitor && msgDeAdmin && !Boolean.TRUE.equals(m.getLida())) {
+                    m.setLida(true);
+                    alterou = true;
+                }
+            }
+            if (alterou) {
+                chatMensagemRepository.saveAll(msgs);
+                log.info("[CHAT] Mensagens marcadas como lidas no canal {} pelo leitor {}", channelId, perfil);
+            }
+        } catch (Exception e) {
+            log.error("[CHAT] Erro ao sincronizar mensagens lidas no canal {}: {}", channelId, e.getMessage());
+        }
     }
 
     /**
@@ -134,8 +182,9 @@ public class ChatService {
             List<ChatMensagem> msgsCanal = msgsPorCanal.getOrDefault(channelId, Collections.emptyList());
             ChatMensagem ultimaMsg = msgsCanal.isEmpty() ? null : msgsCanal.get(msgsCanal.size() - 1);
 
+            // Mensagens enviadas pelo admin NUNCA contam como não lidas para o admin
             long naoLidas = msgsCanal.stream()
-                    .filter(m -> !"admin".equalsIgnoreCase(m.getSenderPerfil()) && !Boolean.TRUE.equals(m.getLida()))
+                    .filter(m -> !isMsgAdmin(m) && !Boolean.TRUE.equals(m.getLida()))
                     .count();
 
             Map<String, Object> item = new LinkedHashMap<>();
@@ -165,8 +214,9 @@ public class ChatService {
             List<ChatMensagem> msgsCanal = msgsPorCanal.getOrDefault(channelId, Collections.emptyList());
             ChatMensagem ultimaMsg = msgsCanal.isEmpty() ? null : msgsCanal.get(msgsCanal.size() - 1);
 
+            // Mensagens enviadas pelo admin NUNCA contam como não lidas para o admin
             long naoLidas = msgsCanal.stream()
-                    .filter(m -> !"admin".equalsIgnoreCase(m.getSenderPerfil()) && !Boolean.TRUE.equals(m.getLida()))
+                    .filter(m -> !isMsgAdmin(m) && !Boolean.TRUE.equals(m.getLida()))
                     .count();
 
             Map<String, Object> empResp = empresarioPayloadMapper.toResponse(u);

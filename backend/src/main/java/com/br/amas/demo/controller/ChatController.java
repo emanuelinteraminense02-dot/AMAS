@@ -68,9 +68,9 @@ public class ChatController {
     }
 
     /**
-     * Marcar mensagens de um canal como lidas.
+     * Marcar mensagens de um canal como lidas (suporta PATCH, POST e PUT para compatibilidade com proxies/firewalls).
      */
-    @PatchMapping("/mensagens/{channelId}/lidas")
+    @RequestMapping(value = "/mensagens/{channelId}/lidas", method = {RequestMethod.PATCH, RequestMethod.POST, RequestMethod.PUT})
     public ResponseEntity<?> marcarLidas(@PathVariable String channelId,
                                          @RequestBody(required = false) Map<String, Object> body) {
         try {

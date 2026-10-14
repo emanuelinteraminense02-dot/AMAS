@@ -17,8 +17,8 @@ public interface ChatMensagemRepository extends JpaRepository<ChatMensagem, Long
 
     long countByChannelIdAndLidaFalseAndSenderPerfilNot(String channelId, String senderPerfil);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Transactional
-    @Query("UPDATE ChatMensagem m SET m.lida = true WHERE m.channelId = :channelId AND m.senderPerfil <> :leitorPerfil AND m.lida = false")
+    @Query("UPDATE ChatMensagem m SET m.lida = true WHERE m.channelId = :channelId AND LOWER(COALESCE(m.senderPerfil, '')) <> LOWER(:leitorPerfil) AND LOWER(COALESCE(m.senderId, '')) <> LOWER(:leitorPerfil) AND (m.lida = false OR m.lida IS NULL)")
     void marcarComoLidas(@Param("channelId") String channelId, @Param("leitorPerfil") String leitorPerfil);
 }

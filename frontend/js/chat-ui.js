@@ -66,6 +66,19 @@
         this.aoReceberNovaMensagem(msg);
       });
 
+      window.ChatClient.on('minha_mensagem_enviada', (msg) => {
+        // Mensagem confirmada pelo servidor: atualiza DOM e snippet sem som ou badge
+        if (this.modo === 'admin') {
+          if (this.adminState.canalSelecionado?.channelId === msg.channelId) {
+            this.adicionarMensagemAoDOM('chatMessagesArea', msg);
+          }
+          this.atualizarUltimaMensagemNaLista(msg.channelId, msg);
+        } else if (msg.channelId === this.clientState.channelId) {
+          const containerId = this.modo === 'empresario' ? 'empChatMessagesArea' : 'userChatMessagesArea';
+          this.adicionarMensagemAoDOM(containerId, msg);
+        }
+      });
+
       window.ChatClient.on('digitando', (data) => {
         this.aoReceberDigitando(data);
       });
@@ -177,6 +190,13 @@
         console.warn('Sincronização de canais:', syncErr);
       }
 
+      // Garante que se o admin já está visualizando um canal, ele não fique com naoLidas > 0
+      if (this.adminState.canalSelecionado) {
+        const canalAberto = this.adminState.canalSelecionado.channelId;
+        (res.associados || []).forEach(c => { if (c.channelId === canalAberto) c.naoLidas = 0; });
+        (res.empresarios || []).forEach(c => { if (c.channelId === canalAberto) c.naoLidas = 0; });
+      }
+
       this.adminState.canais.associados = res.associados || [];
       this.adminState.canais.empresarios = res.empresarios || [];
       this.atualizarContadoresAbasAdmin(res);
@@ -184,8 +204,9 @@
     },
 
     atualizarContadoresAbasAdmin: function (res) {
-      const unreadAssoc = (res.associados || []).reduce((acc, c) => acc + (c.naoLidas || 0), 0);
-      const unreadEmp = (res.empresarios || []).reduce((acc, c) => acc + (c.naoLidas || 0), 0);
+      const canalAberto = this.adminState.canalSelecionado?.channelId;
+      const unreadAssoc = (res.associados || []).reduce((acc, c) => acc + (c.channelId === canalAberto ? 0 : (c.naoLidas || 0)), 0);
+      const unreadEmp = (res.empresarios || []).reduce((acc, c) => acc + (c.channelId === canalAberto ? 0 : (c.naoLidas || 0)), 0);
       const total = unreadAssoc + unreadEmp;
 
       const badgeAssoc = document.getElementById('chatTabAssocBadge');
@@ -743,20 +764,32 @@
         ? window.ChatClient.isMinhaMensagem(msg)
         : false;
 
+      // Se a mensagem foi enviada por mim mesmo, NUNCA notifica nem incrementa badge
+      if (isMinha) {
+        if (this.modo === 'admin') {
+          if (this.adminState.canalSelecionado?.channelId === msg.channelId) {
+            this.adicionarMensagemAoDOM('chatMessagesArea', msg);
+          }
+          this.atualizarUltimaMensagemNaLista(msg.channelId, msg);
+        } else if (msg.channelId === this.clientState.channelId) {
+          const containerId = this.modo === 'empresario' ? 'empChatMessagesArea' : 'userChatMessagesArea';
+          this.adicionarMensagemAoDOM(containerId, msg);
+        }
+        return;
+      }
+
       if (this.modo === 'admin') {
         const canalAtual = this.adminState.canalSelecionado?.channelId;
 
         if (canalAtual === msg.channelId) {
           this.adicionarMensagemAoDOM('chatMessagesArea', msg);
-          if (!isMinha) {
-            window.ChatClient.marcarLidas(canalAtual);
-          }
+          window.ChatClient.marcarLidas(canalAtual);
         }
 
         this.atualizarUltimaMensagemNaLista(msg.channelId, msg);
 
-        // Se a mensagem veio de outra pessoa, atualiza a lista e contadores
-        if (!isMinha) {
+        // Se a mensagem veio de outra pessoa e esse canal NÃO é o que está ativo na tela, atualiza lista e contadores
+        if (canalAtual !== msg.channelId) {
           this.carregarCanaisAdmin();
         }
         return;
@@ -765,9 +798,6 @@
       if (msg.channelId === this.clientState.channelId) {
         const containerId = this.modo === 'empresario' ? 'empChatMessagesArea' : 'userChatMessagesArea';
         this.adicionarMensagemAoDOM(containerId, msg);
-
-        // Mensagem enviada por mim mesmo nunca deve disparar notificação nem incrementar badge
-        if (isMinha) return;
 
         const secChat = document.getElementById('sec-chat');
         if (secChat && !secChat.classList.contains('hidden')) {
@@ -841,11 +871,21 @@
       if (this.modo === 'admin') {
         const res = await window.ChatClient.carregarCanais();
         if (res && res.ok) {
+          // Se o admin estiver com uma conversa aberta, zera o contador do canal aberto
+          if (this.adminState.canalSelecionado) {
+            const canalAberto = this.adminState.canalSelecionado.channelId;
+            (res.associados || []).forEach(c => { if (c.channelId === canalAberto) c.naoLidas = 0; });
+            (res.empresarios || []).forEach(c => { if (c.channelId === canalAberto) c.naoLidas = 0; });
+          }
           this.atualizarContadoresAbasAdmin(res);
         }
       } else if (this.clientState.channelId) {
         const msgs = await window.ChatClient.carregarMensagens(this.clientState.channelId);
-        const naoLidas = msgs.filter((m) => m.senderPerfil === 'admin' && !m.lida).length;
+        const naoLidas = msgs.filter((m) => {
+          const p = String(m.senderPerfil || '').toLowerCase().trim();
+          const id = String(m.senderId || '').toLowerCase().trim();
+          return (p === 'admin' || id === 'admin') && !m.lida;
+        }).length;
         const badgeId = this.modo === 'empresario' ? 'badgeChatEmpresario' : 'badgeChatAssociado';
         const badgeEl = document.getElementById(badgeId);
         if (badgeEl) {

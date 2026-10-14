@@ -80,39 +80,51 @@
       return this.sessao;
     },
 
+    isMsgEnviadaPorAdmin: function (m) {
+      if (!m) return false;
+      const p = String(m.senderPerfil || '').toLowerCase().trim();
+      const id = String(m.senderId || '').toLowerCase().trim();
+      const nome = String(m.senderNome || '').toLowerCase().trim();
+      return p === 'admin' || p === 'administrador' || id === 'admin' || nome.includes('administra');
+    },
+
     isMinhaMensagem: function (msg) {
       if (!msg) return false;
       this.atualizarSessao();
-      if (!this.sessao) return false;
 
-      const meuPerfil = String(this.sessao.perfil || '').toLowerCase().trim();
+      // Detecção inteligente de perfil de quem está usando este navegador
+      const ehTelaAdmin = (window.location && window.location.pathname.includes('admin')) ||
+                          !!document.getElementById('adminNome') ||
+                          (window.chatUI && window.chatUI.modo === 'admin');
+
+      const meuPerfil = ehTelaAdmin ? 'admin' : String(this.sessao?.perfil || '').toLowerCase().trim();
+
       const senderPerfil = String(msg.senderPerfil || '').toLowerCase().trim();
-      const senderId = String(msg.senderId || '').trim();
+      const senderId = String(msg.senderId || '').trim().toLowerCase();
+      const senderNome = String(msg.senderNome || '').toLowerCase().trim();
 
       // Caso 1: Admin
-      if (meuPerfil === 'admin') {
-        if (senderPerfil === 'admin' || senderId === 'admin') {
+      if (meuPerfil === 'admin' || ehTelaAdmin) {
+        if (senderPerfil === 'admin' || senderPerfil === 'administrador' || senderId === 'admin' || senderNome.includes('administra')) {
           return true;
         }
       }
 
       // Caso 2: Associado ou Empresário
-      if (meuPerfil && senderPerfil && meuPerfil === senderPerfil) {
-        const rawMeuId = String(this.sessao.id || '').replace(/^(assoc_|emp_)/, '').trim();
-        const rawSenderId = senderId.replace(/^(assoc_|emp_)/, '').trim();
-        if (rawMeuId && rawSenderId && rawMeuId === rawSenderId) {
+      if (this.sessao) {
+        const rawMeuId = String(this.sessao.id || '').replace(/^(assoc_|emp_)/, '').trim().toLowerCase();
+        const rawSenderId = senderId.replace(/^(assoc_|emp_)/, '').trim().toLowerCase();
+
+        if (meuPerfil && senderPerfil && meuPerfil === senderPerfil) {
+          if (rawMeuId && rawSenderId && rawMeuId === rawSenderId) {
+            return true;
+          }
+        }
+
+        const currentId = meuPerfil === 'empresario' ? `emp_${rawMeuId}` : `assoc_${rawMeuId}`;
+        if (senderId && (senderId === currentId || senderId === rawMeuId || senderId === String(this.sessao.id).toLowerCase())) {
           return true;
         }
-      }
-
-      // Caso 3: Comparação com currentId
-      const rawId = String(this.sessao.id || '').replace(/^(assoc_|emp_)/, '').trim();
-      const currentId = meuPerfil === 'admin'
-        ? 'admin'
-        : (meuPerfil === 'empresario' ? `emp_${rawId}` : `assoc_${rawId}`);
-
-      if (senderId && (senderId === currentId || senderId === String(this.sessao.id))) {
-        return true;
       }
 
       return false;
@@ -126,9 +138,10 @@
             const data = event.data;
             if (data && data.tipo === 'nova_mensagem') {
               const ehMinha = this.isMinhaMensagem(data.mensagem);
-              if (!ehMinha) {
-                tocarSinoNotificacao();
-              }
+              // NUNCA toca som nem dispara nova notificação se a mensagem for do próprio usuário
+              if (ehMinha) return;
+
+              tocarSinoNotificacao();
               this.emit('nova_mensagem', data.mensagem);
             } else if (data && data.tipo === 'digitando') {
               this.emit('digitando', data);
@@ -178,8 +191,10 @@
               const ehMinha = this.isMinhaMensagem(data.mensagem);
               if (!ehMinha) {
                 tocarSinoNotificacao();
+                this.emit('nova_mensagem', data.mensagem);
+              } else {
+                this.emit('minha_mensagem_enviada', data.mensagem);
               }
-              this.emit('nova_mensagem', data.mensagem);
             } else if (data.tipo === 'status_online') {
               this.emit('status_online', data);
             } else if (data.tipo === 'digitando') {
@@ -282,6 +297,7 @@
      */
     carregarCanais: async function () {
       const headers = this.getAuthHeaders();
+      const canalAberto = window.chatUI?.adminState?.canalSelecionado?.channelId;
 
       // 1. Tenta carregar do backend padrão (Render / Spring Boot)
       try {
@@ -289,6 +305,13 @@
         if (resp.ok) {
           const data = await resp.json();
           if (data && data.ok && Array.isArray(data.associados) && Array.isArray(data.empresarios)) {
+            // Se o admin estiver com uma conversa aberta no momento, zera o contador desse canal
+            if (canalAberto) {
+              data.associados.forEach(c => { if (c.channelId === canalAberto) c.naoLidas = 0; });
+              data.empresarios.forEach(c => { if (c.channelId === canalAberto) c.naoLidas = 0; });
+              data.totalNaoLidas = data.associados.reduce((acc, c) => acc + (c.naoLidas || 0), 0) +
+                                   data.empresarios.reduce((acc, c) => acc + (c.naoLidas || 0), 0);
+            }
             try { localStorage.setItem('amas_chat_canais_cache', JSON.stringify(data)); } catch (_) {}
             return data;
           }
@@ -301,6 +324,12 @@
         if (localResp.ok) {
           const data = await localResp.json();
           if (data && data.ok && Array.isArray(data.associados) && Array.isArray(data.empresarios)) {
+            if (canalAberto) {
+              data.associados.forEach(c => { if (c.channelId === canalAberto) c.naoLidas = 0; });
+              data.empresarios.forEach(c => { if (c.channelId === canalAberto) c.naoLidas = 0; });
+              data.totalNaoLidas = data.associados.reduce((acc, c) => acc + (c.naoLidas || 0), 0) +
+                                   data.empresarios.reduce((acc, c) => acc + (c.naoLidas || 0), 0);
+            }
             try { localStorage.setItem('amas_chat_canais_cache', JSON.stringify(data)); } catch (_) {}
             return data;
           }
@@ -334,7 +363,8 @@
           const channelId = `assoc_${a.id}`;
           const msgs = this.obterCacheLocal(channelId);
           const ultimaMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
-          const naoLidas = msgs.filter((m) => m.senderPerfil !== 'admin' && !m.lida).length;
+          let naoLidas = msgs.filter((m) => !this.isMsgEnviadaPorAdmin(m) && !m.lida).length;
+          if (canalAberto && canalAberto === channelId) naoLidas = 0;
 
           return {
             id: a.id,
@@ -361,7 +391,8 @@
           const channelId = `emp_${e.id}`;
           const msgs = this.obterCacheLocal(channelId);
           const ultimaMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
-          const naoLidas = msgs.filter((m) => m.senderPerfil !== 'admin' && !m.lida).length;
+          let naoLidas = msgs.filter((m) => !this.isMsgEnviadaPorAdmin(m) && !m.lida).length;
+          if (canalAberto && canalAberto === channelId) naoLidas = 0;
           const logoImg = e.logo || e.foto || (e.contrato && (e.contrato.logo || e.contrato.foto)) || '';
 
           return {
@@ -415,7 +446,13 @@
 
           const idMap = new Map();
           localMsgs.forEach((m) => idMap.set(String(m.id), m));
-          serverMsgs.forEach((m) => idMap.set(String(m.id), m));
+          serverMsgs.forEach((sm) => {
+            const existing = idMap.get(String(sm.id));
+            if (existing && existing.lida && !sm.lida) {
+              sm.lida = true; // Preserva status de lida já atribuído na visualização local
+            }
+            idMap.set(String(sm.id), sm);
+          });
 
           const merged = Array.from(idMap.values());
           merged.sort((a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime());
@@ -433,7 +470,13 @@
 
           const idMap = new Map();
           localMsgs.forEach((m) => idMap.set(String(m.id), m));
-          serverMsgs.forEach((m) => idMap.set(String(m.id), m));
+          serverMsgs.forEach((sm) => {
+            const existing = idMap.get(String(sm.id));
+            if (existing && existing.lida && !sm.lida) {
+              sm.lida = true; // Preserva status de lida já atribuído localmente
+            }
+            idMap.set(String(sm.id), sm);
+          });
 
           const merged = Array.from(idMap.values());
           merged.sort((a, b) => new Date(a.criadoEm).getTime() - new Date(b.criadoEm).getTime());
@@ -457,14 +500,18 @@
         throw new Error('Nenhum canal de conversa selecionado.');
       }
 
-      const perfil = this.sessao.perfil || 'associado';
-      const rawId = String(this.sessao.id || '').replace(/^(assoc_|emp_)/, '');
+      const ehTelaAdmin = (window.location && window.location.pathname.includes('admin')) ||
+                          !!document.getElementById('adminNome') ||
+                          (window.chatUI && window.chatUI.modo === 'admin');
+
+      const perfil = ehTelaAdmin ? 'admin' : (this.sessao?.perfil || 'associado');
+      const rawId = String(this.sessao?.id || '').replace(/^(assoc_|emp_)/, '');
       const senderId = perfil === 'admin'
         ? 'admin'
         : (perfil === 'empresario' ? `emp_${rawId}` : `assoc_${rawId}`);
       const senderNome = perfil === 'admin'
         ? 'Administração AMAS'
-        : (this.sessao.nome || (perfil === 'empresario' ? 'Empresa Parceira' : 'Associado AMAS'));
+        : (this.sessao?.nome || (perfil === 'empresario' ? 'Empresa Parceira' : 'Associado AMAS'));
 
       const payload = {
         id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
@@ -596,30 +643,18 @@
     },
 
     /**
-     * Marca mensagens como lidas.
+     * Marca mensagens como lidas com atualização imediata e sincronização resiliente.
      */
     marcarLidas: async function (channelId) {
       if (!channelId) return;
       this.atualizarSessao();
-      const perfil = this.sessao?.perfil || 'admin';
+      const ehTelaAdmin = (window.location && window.location.pathname.includes('admin')) ||
+                          !!document.getElementById('adminNome') ||
+                          (window.chatUI && window.chatUI.modo === 'admin');
+      const perfil = ehTelaAdmin ? 'admin' : (this.sessao?.perfil || 'admin');
       const headers = this.getAuthHeaders();
 
-      try {
-        await fetch(this.getApiUrl(`/chat/mensagens/${encodeURIComponent(channelId)}/lidas`), {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ leitorPerfil: perfil })
-        });
-      } catch (_) {
-        try {
-          await fetch(`/api/chat/mensagens/${encodeURIComponent(channelId)}/lidas`, {
-            method: 'PATCH',
-            headers,
-            body: JSON.stringify({ leitorPerfil: perfil })
-          });
-        } catch (_) {}
-      }
-
+      // 1. Marca no cache local de mensagens imediatamente
       const cached = this.obterCacheLocal(channelId);
       let alterou = false;
       cached.forEach(m => {
@@ -630,6 +665,66 @@
       });
       if (alterou) {
         this.salvarCacheLocal(channelId, cached);
+      }
+
+      // 2. Atualiza imediatamente o cache de canais (amas_chat_canais_cache)
+      try {
+        const raw = localStorage.getItem('amas_chat_canais_cache');
+        if (raw) {
+          const cCache = JSON.parse(raw);
+          let mod = false;
+          (cCache.associados || []).forEach(c => {
+            if (c.channelId === channelId && c.naoLidas > 0) {
+              c.naoLidas = 0;
+              mod = true;
+            }
+          });
+          (cCache.empresarios || []).forEach(c => {
+            if (c.channelId === channelId && c.naoLidas > 0) {
+              c.naoLidas = 0;
+              mod = true;
+            }
+          });
+          if (mod) {
+            cCache.totalNaoLidas = (cCache.associados || []).reduce((acc, c) => acc + (c.naoLidas || 0), 0) +
+                                   (cCache.empresarios || []).reduce((acc, c) => acc + (c.naoLidas || 0), 0);
+            localStorage.setItem('amas_chat_canais_cache', JSON.stringify(cCache));
+          }
+        }
+      } catch (_) {}
+
+      // 3. Notifica o backend padrão (PATCH e POST para compatibilidade)
+      const payloadLidas = JSON.stringify({ leitorPerfil: perfil });
+      try {
+        await fetch(this.getApiUrl(`/chat/mensagens/${encodeURIComponent(channelId)}/lidas`), {
+          method: 'PATCH',
+          headers,
+          body: payloadLidas
+        });
+      } catch (_) {
+        try {
+          await fetch(this.getApiUrl(`/chat/mensagens/${encodeURIComponent(channelId)}/lidas`), {
+            method: 'POST',
+            headers,
+            body: payloadLidas
+          });
+        } catch (_) {}
+      }
+
+      try {
+        await fetch(`/api/chat/mensagens/${encodeURIComponent(channelId)}/lidas`, {
+          method: 'PATCH',
+          headers,
+          body: payloadLidas
+        });
+      } catch (_) {
+        try {
+          await fetch(`/api/chat/mensagens/${encodeURIComponent(channelId)}/lidas`, {
+            method: 'POST',
+            headers,
+            body: payloadLidas
+          });
+        } catch (_) {}
       }
     },
 
