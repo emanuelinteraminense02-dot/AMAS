@@ -128,4 +128,20 @@ public class ChatController {
     public ResponseEntity<?> sincronizarMensagens(@RequestBody Map<String, Object> body) {
         return ResponseEntity.ok(Map.of("ok", true, "sincronizado", true));
     }
+
+    /**
+     * Apagar mensagem do chat (marca como apagada por segurança e remove texto e anexo).
+     */
+    @RequestMapping(value = "/mensagens/{id}", method = {RequestMethod.DELETE, RequestMethod.POST})
+    public ResponseEntity<?> apagarMensagem(@PathVariable String id) {
+        try {
+            Map<String, Object> msg = chatService.apagarMensagem(id);
+            return ResponseEntity.ok(Map.of("ok", true, "mensagemId", id, "mensagem", msg));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "erro", e.getMessage()));
+        } catch (Exception e) {
+            log.error("[CHAT API] Erro ao apagar mensagem {}:", id, e);
+            return ResponseEntity.internalServerError().body(Map.of("ok", false, "erro", e.getMessage()));
+        }
+    }
 }

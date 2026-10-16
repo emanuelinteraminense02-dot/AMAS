@@ -188,9 +188,9 @@ function executarLogin() {
 
 
   if (btnEl) {
-
     btnEl.disabled = true;
-    btnEl.textContent = "Aguarde...";
+    btnEl.classList.add("btn-loading");
+    btnEl.innerHTML = '<span class="btn-loading-spinner"></span><span>Entrando...</span>';
   }
 
 
@@ -215,10 +215,9 @@ function executarLogin() {
           );
 
           if (btnEl) {
-
             btnEl.disabled = false;
-            btnEl.textContent =
-                "Entrar no sistema";
+            btnEl.classList.remove("btn-loading");
+            btnEl.innerHTML = "Entrar no sistema";
           }
 
           return;
@@ -279,10 +278,9 @@ function executarLogin() {
 
 
           if (btnEl) {
-
             btnEl.disabled = false;
-            btnEl.textContent =
-                "Entrar no sistema";
+            btnEl.classList.remove("btn-loading");
+            btnEl.innerHTML = "Entrar no sistema";
           }
 
           return;
@@ -342,10 +340,9 @@ function executarLogin() {
 
 
         if (btnEl) {
-
           btnEl.disabled = false;
-          btnEl.textContent =
-              "Entrar no sistema";
+          btnEl.classList.remove("btn-loading");
+          btnEl.innerHTML = "Entrar no sistema";
         }
       });
 }
@@ -714,8 +711,8 @@ document.addEventListener(
 
 
                 btnRedef.disabled = true;
-                btnRedef.textContent =
-                    "Salvando...";
+                btnRedef.classList.add("btn-loading");
+                btnRedef.innerHTML = '<span class="btn-loading-spinner"></span><span>Salvando...</span>';
 
 
                 /*
@@ -805,8 +802,8 @@ document.addEventListener(
 
                       btnRedef.disabled =
                           false;
-
-                      btnRedef.textContent =
+                      btnRedef.classList.remove("btn-loading");
+                      btnRedef.innerHTML =
                           "Salvar nova senha e entrar";
                     });
               }
@@ -1175,10 +1172,9 @@ document.addEventListener(
 
               btnSolicitarReset.disabled =
                   true;
-
-              btnSolicitarReset.textContent =
-                  "Enviando...";
-
+              btnSolicitarReset.classList.add("btn-loading");
+              btnSolicitarReset.innerHTML =
+                  '<span class="btn-loading-spinner"></span><span>Enviando...</span>';
 
               solicitarResetSenha(email)
 
@@ -1201,8 +1197,8 @@ document.addEventListener(
 
                       btnSolicitarReset.disabled =
                           false;
-
-                      btnSolicitarReset.textContent =
+                      btnSolicitarReset.classList.remove("btn-loading");
+                      btnSolicitarReset.innerHTML =
                           "Enviar solicitação";
 
                       return;
@@ -1239,6 +1235,10 @@ document.addEventListener(
                       );
                     }
 
+                    btnSolicitarReset.disabled = false;
+                    btnSolicitarReset.classList.remove("btn-loading");
+                    btnSolicitarReset.innerHTML = "Enviar solicitação";
+
                   })
 
                   .catch(function (err) {
@@ -1256,8 +1256,8 @@ document.addEventListener(
 
                     btnSolicitarReset.disabled =
                         false;
-
-                    btnSolicitarReset.textContent =
+                    btnSolicitarReset.classList.remove("btn-loading");
+                    btnSolicitarReset.innerHTML =
                         "Enviar solicitação";
                   });
             }
@@ -1268,32 +1268,66 @@ document.addEventListener(
       /* =====================================================
          VERIFICAÇÃO DE SESSÃO EXISTENTE
          ===================================================== */
+      const urlParams = new URLSearchParams(window.location.search);
+      const forcarNovoLogin = urlParams.has("novo") || urlParams.has("logout") || urlParams.has("sair") || urlParams.has("trocar");
 
-      var sessaoAtiva =
-          (
-              typeof getSessao === "function"
-          )
-              ? getSessao()
-              : null;
+      if (forcarNovoLogin && typeof clearSessao === "function") {
+        clearSessao();
+      }
 
+      var sessaoAtiva = forcarNovoLogin ? null : ((typeof getSessao === "function") ? getSessao() : null);
 
-      if (
-          sessaoAtiva &&
-          !sessaoAtiva._pendingRedefinir
-      ) {
+      if (sessaoAtiva && sessaoAtiva._pendingRedefinir) {
+        loginMostrarRedefinir(sessaoAtiva);
+      } else if (sessaoAtiva && sessaoAtiva.perfil) {
+        const wrap = document.querySelector(".login-form-wrap");
+        if (wrap) {
+          let banner = document.getElementById("bannerSessaoAtiva");
+          if (!banner) {
+            banner = document.createElement("div");
+            banner.id = "bannerSessaoAtiva";
+            banner.className = "sessao-ativa-card";
+            const formLogin = document.getElementById("formLogin");
+            if (formLogin) {
+              wrap.insertBefore(banner, formLogin);
+            } else {
+              wrap.prepend(banner);
+            }
+          }
 
-        loginRedirecionar(
-            sessaoAtiva.perfil
-        );
+          const perfilLabel = sessaoAtiva.perfil === "admin" ? "Administrador" : sessaoAtiva.perfil === "empresario" ? "Empresário Parceiro" : "Associado";
+          const nomeUsuario = sessaoAtiva.nome || "Usuário";
 
-      } else if (
-          sessaoAtiva &&
-          sessaoAtiva._pendingRedefinir
-      ) {
+          banner.innerHTML = `
+            <div class="sessao-ativa-header">
+              <div class="sessao-ativa-icon"><i class="bi bi-person-check-fill"></i></div>
+              <div class="sessao-ativa-info">
+                <div class="sessao-ativa-titulo">Sessão ativa detectada</div>
+                <div class="sessao-ativa-desc">Você já está conectado como <strong>${nomeUsuario}</strong> (${perfilLabel}).</div>
+              </div>
+            </div>
+            <div class="sessao-ativa-actions">
+              <button type="button" class="btn btn-primary btn-sm" id="btnContinuarPainel">
+                <i class="bi bi-speedometer2"></i> Acessar meu Painel
+              </button>
+              <button type="button" class="btn btn-outline btn-sm" id="btnSairSessao">
+                <i class="bi bi-box-arrow-right"></i> Entrar com outra conta
+              </button>
+            </div>
+          `;
 
-        loginMostrarRedefinir(
-            sessaoAtiva
-        );
+          document.getElementById("btnContinuarPainel")?.addEventListener("click", () => {
+            loginRedirecionar(sessaoAtiva.perfil);
+          });
+
+          document.getElementById("btnSairSessao")?.addEventListener("click", () => {
+            if (typeof clearSessao === "function") clearSessao();
+            banner.remove();
+            if (typeof showToast === "function") {
+              showToast("Sessão encerrada. Você pode entrar com outra conta.", "info");
+            }
+          });
+        }
       }
 
     }

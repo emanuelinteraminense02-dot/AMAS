@@ -285,7 +285,9 @@ public class ChatService {
         map.put("criadoEm", m.getCriadoEm() != null ? m.getCriadoEm().format(ISO_FORMATTER) : LocalDateTime.now().format(ISO_FORMATTER));
         map.put("lida", Boolean.TRUE.equals(m.getLida()));
 
-        if (m.getAnexoUrl() != null && !m.getAnexoUrl().isBlank()) {
+        map.put("apagada", Boolean.TRUE.equals(m.getApagada()));
+
+        if (!Boolean.TRUE.equals(m.getApagada()) && m.getAnexoUrl() != null && !m.getAnexoUrl().isBlank()) {
             Map<String, Object> anexo = new LinkedHashMap<>();
             anexo.put("nome", m.getAnexoNome() != null ? m.getAnexoNome() : "arquivo");
             anexo.put("url", m.getAnexoUrl());
@@ -302,14 +304,45 @@ public class ChatService {
     private Map<String, Object> converterResumoUltimaMensagem(ChatMensagem m) {
         if (m == null) return null;
         Map<String, Object> map = new LinkedHashMap<>();
-        String txt = m.getTexto();
-        if ((txt == null || txt.isBlank()) && m.getAnexoNome() != null) {
+        String txt = Boolean.TRUE.equals(m.getApagada()) ? "Mensagem apagada" : m.getTexto();
+        if (!Boolean.TRUE.equals(m.getApagada()) && (txt == null || txt.isBlank()) && m.getAnexoNome() != null) {
             txt = "[Anexo: " + m.getAnexoNome() + "]";
         }
         map.put("texto", txt != null ? txt : "");
         map.put("criadoEm", m.getCriadoEm() != null ? m.getCriadoEm().format(ISO_FORMATTER) : null);
         map.put("senderPerfil", m.getSenderPerfil());
         map.put("senderNome", m.getSenderNome());
+        map.put("apagada", Boolean.TRUE.equals(m.getApagada()));
         return map;
+    }
+
+    /**
+     * Apaga uma mensagem do chat marcando-a como apagada e limpando texto e anexos por segurança.
+     */
+    @Transactional
+    public Map<String, Object> apagarMensagem(String idStr) {
+        if (idStr == null || idStr.isBlank()) {
+            throw new IllegalArgumentException("ID da mensagem inválido.");
+        }
+        Long id;
+        try {
+            id = Long.parseLong(idStr.replace("msg_", "").trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Formato de ID inválido: " + idStr);
+        }
+
+        ChatMensagem m = chatMensagemRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Mensagem não encontrada com ID " + id));
+
+        m.setApagada(true);
+        m.setTexto("");
+        m.setAnexoNome(null);
+        m.setAnexoUrl(null);
+        m.setAnexoTipo(null);
+        m.setAnexoTamanho(null);
+
+        chatMensagemRepository.save(m);
+        log.info("[CHAT] Mensagem {} do canal {} apagada com sucesso", id, m.getChannelId());
+        return converterMensagemParaMap(m);
     }
 }

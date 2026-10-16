@@ -58,13 +58,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   renderStatusChip();
 
-  // ── Primeiro login
-  if (assoc.primeiroLogin !== false) {
-    document.getElementById("avisoSenha").classList.remove("hidden");
-    document.getElementById("modalSenha").classList.remove("hidden");
+  // ── Primeiro login (apenas quando explicitamente true)
+  if (assoc && assoc.primeiroLogin === true) {
+    document.getElementById("avisoSenha")?.classList.remove("hidden");
+    document.getElementById("modalSenha")?.classList.remove("hidden");
   }
   document.getElementById("btnIrTrocarSenha")?.addEventListener("click", () => {
-    document.getElementById("modalSenha").classList.remove("hidden");
+    document.getElementById("modalSenha")?.classList.remove("hidden");
+  });
+
+  // Fechar modal ao clicar no backdrop ou teclar Escape (segurança anti-travamento)
+  const modalSenhaEl = document.getElementById("modalSenha");
+  if (modalSenhaEl) {
+    modalSenhaEl.addEventListener("click", (e) => {
+      if (e.target === modalSenhaEl) {
+        modalSenhaEl.classList.add("hidden");
+      }
+    });
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      document.getElementById("modalSenha")?.classList.add("hidden");
+      document.getElementById("modalEditarPerfil")?.classList.add("hidden");
+    }
   });
 
   document.getElementById("formTrocarSenha").addEventListener("submit", async (e) => {

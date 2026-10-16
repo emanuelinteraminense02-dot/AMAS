@@ -43,4 +43,7 @@ public class ChatMensagem {
 
     @Builder.Default
     private Boolean lida = false;
+
+    @Builder.Default
+    private Boolean apagada = false;
 }

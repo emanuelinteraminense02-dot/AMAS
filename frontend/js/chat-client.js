@@ -53,6 +53,8 @@
     broadcastChannel: null,
     listeners: {
       nova_mensagem: [],
+      minha_mensagem_enviada: [],
+      mensagem_apagada: [],
       status_online: [],
       digitando: [],
       mensagens_lidas: [],
@@ -145,6 +147,19 @@
               this.emit('nova_mensagem', data.mensagem);
             } else if (data && data.tipo === 'digitando') {
               this.emit('digitando', data);
+            } else if (data && data.tipo === 'mensagem_apagada') {
+              const { channelId, mensagemId } = data;
+              if (channelId && mensagemId) {
+                const cached = this.obterCacheLocal(channelId);
+                const msg = cached.find(item => String(item.id) === String(mensagemId));
+                if (msg) {
+                  msg.apagada = true;
+                  msg.texto = '';
+                  msg.anexo = null;
+                  this.salvarCacheLocal(channelId, cached);
+                }
+              }
+              this.emit('mensagem_apagada', data);
             }
           };
         } catch (_) {}
@@ -195,6 +210,19 @@
               } else {
                 this.emit('minha_mensagem_enviada', data.mensagem);
               }
+            } else if (data.tipo === 'mensagem_apagada') {
+              const { channelId, mensagemId } = data;
+              if (channelId && mensagemId) {
+                const cached = this.obterCacheLocal(channelId);
+                const msg = cached.find(item => String(item.id) === String(mensagemId));
+                if (msg) {
+                  msg.apagada = true;
+                  msg.texto = '';
+                  msg.anexo = null;
+                  this.salvarCacheLocal(channelId, cached);
+                }
+              }
+              this.emit('mensagem_apagada', data);
             } else if (data.tipo === 'status_online') {
               this.emit('status_online', data);
             } else if (data.tipo === 'digitando') {
@@ -451,6 +479,11 @@
             if (existing && existing.lida && !sm.lida) {
               sm.lida = true; // Preserva status de lida já atribuído na visualização local
             }
+            if ((existing && existing.apagada) || sm.apagada) {
+              sm.apagada = true;
+              sm.texto = '';
+              sm.anexo = null;
+            }
             idMap.set(String(sm.id), sm);
           });
 
@@ -474,6 +507,11 @@
             const existing = idMap.get(String(sm.id));
             if (existing && existing.lida && !sm.lida) {
               sm.lida = true; // Preserva status de lida já atribuído localmente
+            }
+            if ((existing && existing.apagada) || sm.apagada) {
+              sm.apagada = true;
+              sm.texto = '';
+              sm.anexo = null;
             }
             idMap.set(String(sm.id), sm);
           });
@@ -728,6 +766,73 @@
       }
     },
 
+    /**
+     * Apaga uma mensagem com persistência, segurança e sincronização em tempo real.
+     */
+    apagarMensagem: async function (channelId, mensagemId) {
+      if (!mensagemId) return false;
+
+      // 1. Atualiza imediatamente o cache local do canal
+      if (channelId) {
+        const cached = this.obterCacheLocal(channelId);
+        const msg = cached.find(item => String(item.id) === String(mensagemId));
+        if (msg) {
+          msg.apagada = true;
+          msg.texto = '';
+          msg.anexo = null;
+          this.salvarCacheLocal(channelId, cached);
+        }
+      }
+
+      // 2. Dispara localmente para atualizar a interface imediatamente
+      this.emit('mensagem_apagada', { channelId, mensagemId });
+
+      // 3. Notifica outras abas abertas pelo mesmo usuário
+      if (this.broadcastChannel) {
+        try {
+          this.broadcastChannel.postMessage({
+            tipo: 'mensagem_apagada',
+            channelId,
+            mensagemId
+          });
+        } catch (_) {}
+      }
+
+      // 4. Dispara requisição ao servidor para persistência
+      const headers = this.getAuthHeaders();
+      let sucesso = false;
+
+      try {
+        const resp = await fetch(`/api/chat/mensagens/${encodeURIComponent(mensagemId)}`, {
+          method: 'DELETE',
+          headers
+        });
+        if (resp.ok) sucesso = true;
+      } catch (_) {}
+
+      if (!sucesso) {
+        try {
+          const resp = await fetch(`/api/chat/mensagens/${encodeURIComponent(mensagemId)}/apagar`, {
+            method: 'POST',
+            headers
+          });
+          if (resp.ok) sucesso = true;
+        } catch (_) {}
+      }
+
+      if (!sucesso) {
+        try {
+          const resp = await fetch(this.getApiUrl(`/chat/mensagens/${encodeURIComponent(mensagemId)}`), {
+            method: 'DELETE',
+            headers
+          });
+          if (resp.ok) sucesso = true;
+        } catch (_) {}
+      }
+
+      return true;
+    },
+
     notificarDigitando: function (channelId, isTyping) {
       this.atualizarSessao();
       if (!this.sessao) return;
@@ -794,16 +899,22 @@
       const url = anexo.url;
       const tipo = anexo.tipo || 'arquivo';
       const tamanho = this.formatarBytes(anexo.tamanho);
+      const safeUrl = encodeURIComponent(url);
+      const safeNome = encodeURIComponent(anexo.nome || 'arquivo');
 
       if (tipo === 'imagem') {
         return `
-          <div class="chat-anexo-card">
-            <a href="${url}" target="_blank" rel="noopener" title="Clique para ampliar">
+          <div class="chat-anexo-card chat-anexo-img-card" onclick="window.chatUI && window.chatUI.abrirVisualizadorMidia('${safeUrl}', '${safeNome}', 'imagem', '${tamanho}')">
+            <div class="chat-anexo-img-wrapper" title="Clique para ampliar no sistema">
               <img src="${url}" alt="${nome}" class="chat-anexo-img-thumb" loading="lazy" />
-            </a>
-            <div style="padding:4px 8px;font-size:0.7rem;color:#94a3b8;display:flex;justify-content:space-between;">
-              <span>${nome}</span>
-              <span>${tamanho}</span>
+              <div class="chat-anexo-img-overlay">
+                <i class="bi bi-arrows-fullscreen"></i>
+                <span>Ampliar imagem</span>
+              </div>
+            </div>
+            <div class="chat-anexo-img-footer">
+              <span class="chat-anexo-nome-trunc" title="${nome}">${nome}</span>
+              <span class="chat-anexo-tam">${tamanho}</span>
             </div>
           </div>
         `;
@@ -813,15 +924,15 @@
         return `
           <div class="chat-anexo-card chat-anexo-file">
             <i class="bi bi-file-earmark-pdf-fill chat-anexo-icon" style="color:#ef4444;"></i>
-            <div class="chat-anexo-details">
+            <div class="chat-anexo-details" onclick="window.chatUI && window.chatUI.abrirVisualizadorMidia('${safeUrl}', '${safeNome}', 'pdf', '${tamanho}')" style="cursor:pointer;" title="Clique para visualizar no sistema">
               <div class="chat-anexo-nome" title="${nome}">${nome}</div>
               <div class="chat-anexo-size">Documento PDF · ${tamanho}</div>
             </div>
             <div class="chat-anexo-actions">
-              <a href="${url}" target="_blank" rel="noopener" class="btn btn-outline btn-xs" title="Abrir">
-                <i class="bi bi-box-arrow-up-right"></i> Abrir
-              </a>
-              <a href="${url}" download="${nome}" class="btn btn-outline btn-xs" title="Baixar">
+              <button type="button" class="btn btn-outline btn-xs btn-open-media" onclick="window.chatUI && window.chatUI.abrirVisualizadorMidia('${safeUrl}', '${safeNome}', 'pdf', '${tamanho}')" title="Visualizar documento dentro do sistema">
+                <i class="bi bi-eye"></i> Visualizar
+              </button>
+              <a href="${url}" download="${nome}" class="btn btn-outline btn-xs" title="Baixar arquivo">
                 <i class="bi bi-download"></i>
               </a>
             </div>
@@ -831,14 +942,17 @@
 
       return `
         <div class="chat-anexo-card chat-anexo-file">
-          <i class="bi bi-file-earmark-arrow-down chat-anexo-icon"></i>
-          <div class="chat-anexo-details">
+          <i class="bi bi-file-earmark-arrow-down chat-anexo-icon" style="color:#38bdf8;"></i>
+          <div class="chat-anexo-details" onclick="window.chatUI && window.chatUI.abrirVisualizadorMidia('${safeUrl}', '${safeNome}', '${tipo}', '${tamanho}')" style="cursor:pointer;" title="Clique para visualizar no sistema">
             <div class="chat-anexo-nome" title="${nome}">${nome}</div>
             <div class="chat-anexo-size">${tamanho}</div>
           </div>
           <div class="chat-anexo-actions">
-            <a href="${url}" download="${nome}" class="btn btn-outline btn-xs">
-              <i class="bi bi-download"></i> Baixar
+            <button type="button" class="btn btn-outline btn-xs btn-open-media" onclick="window.chatUI && window.chatUI.abrirVisualizadorMidia('${safeUrl}', '${safeNome}', '${tipo}', '${tamanho}')" title="Visualizar no sistema">
+              <i class="bi bi-eye"></i> Visualizar
+            </button>
+            <a href="${url}" download="${nome}" class="btn btn-outline btn-xs" title="Baixar arquivo">
+              <i class="bi bi-download"></i>
             </a>
           </div>
         </div>

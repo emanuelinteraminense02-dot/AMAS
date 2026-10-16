@@ -23,8 +23,17 @@
       anexoStaged: null,
       typingTimeout: null
     },
+    msgParaApagar: null,
+    mediaViewer: {
+      zoom: 1,
+      rotation: 0,
+      url: '',
+      nome: '',
+      tipo: ''
+    },
 
     init: function () {
+      this.assegurarModaisChat();
       this.atualizarSessao();
       if (!this.sessao) return;
 
@@ -77,6 +86,10 @@
           const containerId = this.modo === 'empresario' ? 'empChatMessagesArea' : 'userChatMessagesArea';
           this.adicionarMensagemAoDOM(containerId, msg);
         }
+      });
+
+      window.ChatClient.on('mensagem_apagada', (data) => {
+        this.aoMensagemApagada(data);
       });
 
       window.ChatClient.on('digitando', (data) => {
@@ -524,24 +537,49 @@
                        (meuPerfil !== 'admin' && m.senderPerfil !== 'admin');
 
         const hora = window.ChatClient.formatarHora(m.criadoEm);
-        const anexoHtml = m.anexo ? window.ChatClient.renderAnexoHTML(m.anexo) : '';
-        const checkIcon = isSent
-          ? `<i class="bi bi-check2-all chat-msg-status ${m.lida ? 'read' : ''}" title="${m.lida ? 'Lida' : 'Enviada'}"></i>`
-          : '';
+        const isApagada = !!m.apagada;
 
-        html += `
-          <div class="chat-msg-row ${isSent ? 'sent' : 'received'}" id="msgRow_${m.id}">
-            <div class="chat-msg-author">${window.ChatClient.escapeHtml(m.senderNome)}</div>
-            <div class="chat-msg-bubble">
-              ${m.texto ? `<div class="chat-msg-text">${window.ChatClient.escapeHtml(m.texto)}</div>` : ''}
-              ${anexoHtml}
-              <div class="chat-msg-meta">
-                <span>${hora}</span>
-                ${checkIcon}
+        if (isApagada) {
+          html += `
+            <div class="chat-msg-row ${isSent ? 'sent' : 'received'} msg-deleted" id="msgRow_${m.id}">
+              <div class="chat-msg-author">${window.ChatClient.escapeHtml(m.senderNome)}</div>
+              <div class="chat-msg-bubble chat-msg-bubble-deleted">
+                <div class="chat-msg-deleted-text">
+                  <i class="bi bi-slash-circle"></i> Mensagem apagada
+                </div>
+                <div class="chat-msg-meta">
+                  <span>${hora}</span>
+                </div>
               </div>
             </div>
-          </div>
-        `;
+          `;
+        } else {
+          const anexoHtml = m.anexo ? window.ChatClient.renderAnexoHTML(m.anexo) : '';
+          const checkIcon = isSent
+            ? `<i class="bi bi-check2-all chat-msg-status ${m.lida ? 'read' : ''}" title="${m.lida ? 'Lida' : 'Enviada'}"></i>`
+            : '';
+
+          html += `
+            <div class="chat-msg-row ${isSent ? 'sent' : 'received'}" id="msgRow_${m.id}">
+              <div class="chat-msg-author">${window.ChatClient.escapeHtml(m.senderNome)}</div>
+              <div class="chat-msg-bubble-wrap">
+                <div class="chat-msg-bubble">
+                  ${m.texto ? `<div class="chat-msg-text">${window.ChatClient.escapeHtml(m.texto)}</div>` : ''}
+                  ${anexoHtml}
+                  <div class="chat-msg-meta">
+                    <span>${hora}</span>
+                    ${checkIcon}
+                  </div>
+                </div>
+                <div class="chat-msg-actions">
+                  <button type="button" class="chat-msg-btn-action chat-btn-delete" title="Apagar mensagem" onclick="window.chatUI.solicitarApagarMensagem('${m.id}', '${m.channelId}')">
+                    <i class="bi bi-trash3"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
       });
 
       container.innerHTML = html;
@@ -565,25 +603,49 @@
                      (meuPerfil !== 'admin' && msg.senderPerfil !== 'admin');
 
       const hora = window.ChatClient.formatarHora(msg.criadoEm);
-      const anexoHtml = msg.anexo ? window.ChatClient.renderAnexoHTML(msg.anexo) : '';
-      const checkIcon = isSent
-        ? `<i class="bi bi-check2-all chat-msg-status ${msg.lida ? 'read' : ''}"></i>`
-        : '';
+      const isApagada = !!msg.apagada;
 
       const div = document.createElement('div');
-      div.className = `chat-msg-row ${isSent ? 'sent' : 'received'}`;
+      div.className = `chat-msg-row ${isSent ? 'sent' : 'received'}${isApagada ? ' msg-deleted' : ''}`;
       div.id = `msgRow_${msg.id}`;
-      div.innerHTML = `
-        <div class="chat-msg-author">${window.ChatClient.escapeHtml(msg.senderNome)}</div>
-        <div class="chat-msg-bubble">
-          ${msg.texto ? `<div class="chat-msg-text">${window.ChatClient.escapeHtml(msg.texto)}</div>` : ''}
-          ${anexoHtml}
-          <div class="chat-msg-meta">
-            <span>${hora}</span>
-            ${checkIcon}
+
+      if (isApagada) {
+        div.innerHTML = `
+          <div class="chat-msg-author">${window.ChatClient.escapeHtml(msg.senderNome)}</div>
+          <div class="chat-msg-bubble chat-msg-bubble-deleted">
+            <div class="chat-msg-deleted-text">
+              <i class="bi bi-slash-circle"></i> Mensagem apagada
+            </div>
+            <div class="chat-msg-meta">
+              <span>${hora}</span>
+            </div>
           </div>
-        </div>
-      `;
+        `;
+      } else {
+        const anexoHtml = msg.anexo ? window.ChatClient.renderAnexoHTML(msg.anexo) : '';
+        const checkIcon = isSent
+          ? `<i class="bi bi-check2-all chat-msg-status ${msg.lida ? 'read' : ''}"></i>`
+          : '';
+
+        div.innerHTML = `
+          <div class="chat-msg-author">${window.ChatClient.escapeHtml(msg.senderNome)}</div>
+          <div class="chat-msg-bubble-wrap">
+            <div class="chat-msg-bubble">
+              ${msg.texto ? `<div class="chat-msg-text">${window.ChatClient.escapeHtml(msg.texto)}</div>` : ''}
+              ${anexoHtml}
+              <div class="chat-msg-meta">
+                <span>${hora}</span>
+                ${checkIcon}
+              </div>
+            </div>
+            <div class="chat-msg-actions">
+              <button type="button" class="chat-msg-btn-action chat-btn-delete" title="Apagar mensagem" onclick="window.chatUI.solicitarApagarMensagem('${msg.id}', '${msg.channelId}')">
+                <i class="bi bi-trash3"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }
 
       container.appendChild(div);
       this.rolarAteOFim(container);
@@ -595,10 +657,11 @@
       const contato = todos.find(c => c.channelId === channelId);
       if (contato) {
         contato.ultimaMensagem = {
-          texto: msg.texto || (msg.anexo ? `[Anexo: ${msg.anexo.nome}]` : ''),
+          texto: msg.apagada ? 'Mensagem apagada' : (msg.texto || (msg.anexo ? `[Anexo: ${msg.anexo.nome}]` : '')),
           criadoEm: msg.criadoEm,
           senderPerfil: msg.senderPerfil,
-          senderNome: msg.senderNome
+          senderNome: msg.senderNome,
+          apagada: !!msg.apagada
         };
         this.renderizarListaContatosAdmin();
       }
@@ -903,6 +966,310 @@
         const targetId = this.modo === 'empresario' ? 'empChatMessagesArea' : 'userChatMessagesArea';
         this.carregarMensagensDoCanal(this.clientState.channelId, targetId);
       }
+    },
+
+    // ══════════════════════════════════════════════════════════════════
+    // EXCLUSÃO SEGURA DE MENSAGENS COM CONFIRMAÇÃO E MARCADOR
+    // ══════════════════════════════════════════════════════════════════
+    solicitarApagarMensagem: function (msgId, channelId) {
+      if (!msgId) return;
+      this.assegurarModaisChat();
+      this.msgParaApagar = { msgId, channelId };
+      const modal = document.getElementById('chatDeleteConfirmModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+      }
+    },
+
+    fecharModalApagarMensagem: function () {
+      this.msgParaApagar = null;
+      const modal = document.getElementById('chatDeleteConfirmModal');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
+      const btn = document.getElementById('btnConfirmarExclusaoMsg');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-trash3"></i> Apagar mensagem';
+      }
+    },
+
+    confirmarApagarMensagem: async function () {
+      if (!this.msgParaApagar) return;
+      const { msgId, channelId } = this.msgParaApagar;
+      const targetChannel = channelId || (this.modo === 'admin' ? this.adminState.canalSelecionado?.channelId : this.clientState.channelId);
+
+      const btn = document.getElementById('btnConfirmarExclusaoMsg');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Apagando...';
+      }
+
+      try {
+        await window.ChatClient.apagarMensagem(targetChannel, msgId);
+        this.marcarMensagemComoApagadaNoDOM(msgId);
+        this.atualizarMensagemApagadaNaLista(targetChannel, msgId);
+        if (typeof showToast === 'function') {
+          showToast('Mensagem apagada com sucesso.', 'info');
+        }
+      } catch (err) {
+        console.error('Erro ao apagar mensagem:', err);
+        if (typeof showToast === 'function') {
+          showToast('Erro ao apagar mensagem. Tente novamente.', 'error');
+        }
+      } finally {
+        this.fecharModalApagarMensagem();
+      }
+    },
+
+    aoMensagemApagada: function (data) {
+      if (!data) return;
+      const { channelId, mensagemId } = data;
+      if (mensagemId) {
+        this.marcarMensagemComoApagadaNoDOM(mensagemId);
+      }
+      if (channelId) {
+        this.atualizarMensagemApagadaNaLista(channelId, mensagemId);
+      }
+    },
+
+    marcarMensagemComoApagadaNoDOM: function (msgId) {
+      const row = document.getElementById(`msgRow_${msgId}`);
+      if (!row) return;
+
+      const horaEl = row.querySelector('.chat-msg-meta span');
+      const hora = horaEl ? horaEl.textContent : '';
+
+      row.classList.add('msg-deleted');
+      row.innerHTML = `
+        <div class="chat-msg-author">${row.querySelector('.chat-msg-author')?.textContent || ''}</div>
+        <div class="chat-msg-bubble chat-msg-bubble-deleted">
+          <div class="chat-msg-deleted-text">
+            <i class="bi bi-slash-circle"></i> Mensagem apagada
+          </div>
+          <div class="chat-msg-meta">
+            <span>${hora}</span>
+          </div>
+        </div>
+      `;
+    },
+
+    atualizarMensagemApagadaNaLista: function (channelId, mensagemId) {
+      if (!channelId) return;
+      const todos = [...(this.adminState.canais.associados || []), ...(this.adminState.canais.empresarios || [])];
+      const contato = todos.find(c => c.channelId === channelId);
+      if (contato && contato.ultimaMensagem) {
+        contato.ultimaMensagem.texto = 'Mensagem apagada';
+        contato.ultimaMensagem.apagada = true;
+        this.renderizarListaContatosAdmin();
+      }
+    },
+
+    // ══════════════════════════════════════════════════════════════════
+    // VISUALIZADOR INTERNO DE MÍDIA E DOCUMENTOS (SEM ABRIR NOVA ABA)
+    // ══════════════════════════════════════════════════════════════════
+    abrirVisualizadorMidia: function (encodedUrl, encodedNome, tipo, tamanho) {
+      this.assegurarModaisChat();
+      const modal = document.getElementById('chatMediaViewerModal');
+      const body = document.getElementById('chatMediaModalBody');
+      const titleEl = document.getElementById('chatMediaModalTitle');
+      const subEl = document.getElementById('chatMediaModalSubtitle');
+      const iconEl = document.getElementById('chatMediaModalIcon');
+      const toolsEl = document.getElementById('chatMediaModalTools');
+      const dlBtn = document.getElementById('chatMediaDownloadBtn');
+
+      if (!modal || !body) return;
+
+      const url = decodeURIComponent(encodedUrl || '');
+      const nome = decodeURIComponent(encodedNome || 'arquivo');
+      const tipoClean = String(tipo || 'arquivo').toLowerCase();
+
+      this.mediaViewer = {
+        zoom: 1,
+        rotation: 0,
+        url,
+        nome,
+        tipo: tipoClean
+      };
+
+      if (titleEl) titleEl.textContent = nome;
+      if (subEl) subEl.textContent = `${tipoClean.toUpperCase()} · ${tamanho || ''}`;
+      if (dlBtn) {
+        dlBtn.href = url;
+        dlBtn.download = nome;
+      }
+
+      if (tipoClean === 'imagem') {
+        if (iconEl) iconEl.className = 'bi bi-image chat-media-modal-icon';
+        if (toolsEl) toolsEl.style.display = 'flex';
+        this.resetarZoom();
+
+        body.innerHTML = `
+          <div class="chat-media-img-viewport" id="chatMediaImgViewport">
+            <img src="${url}" alt="${window.ChatClient.escapeHtml(nome)}" class="chat-media-img-display" id="chatMediaImgDisplay" />
+          </div>
+        `;
+      } else if (tipoClean === 'pdf') {
+        if (iconEl) iconEl.className = 'bi bi-file-earmark-pdf-fill chat-media-modal-icon';
+        if (toolsEl) toolsEl.style.display = 'none';
+
+        body.innerHTML = `
+          <div class="chat-media-pdf-wrapper">
+            <iframe src="${url}#toolbar=1" class="chat-media-pdf-frame" title="${window.ChatClient.escapeHtml(nome)}"></iframe>
+          </div>
+        `;
+      } else {
+        if (iconEl) iconEl.className = 'bi bi-file-earmark-text-fill chat-media-modal-icon';
+        if (toolsEl) toolsEl.style.display = 'none';
+
+        body.innerHTML = `
+          <div class="chat-media-doc-card">
+            <div class="chat-media-doc-icon">
+              <i class="bi bi-file-earmark-arrow-down-fill"></i>
+            </div>
+            <h3 class="chat-media-doc-title">${window.ChatClient.escapeHtml(nome)}</h3>
+            <p class="chat-media-doc-meta">Documento / Anexo · ${tamanho || ''}</p>
+            <p style="color:#94a3b8;font-size:0.85rem;max-width:320px;margin:0 auto 16px;">
+              Este formato de arquivo pode ser baixado diretamente para visualização completa no seu dispositivo.
+            </p>
+            <a href="${url}" download="${nome}" class="btn btn-primary btn-md">
+              <i class="bi bi-download"></i> Baixar para meu dispositivo
+            </a>
+          </div>
+        `;
+      }
+
+      modal.classList.remove('hidden');
+    },
+
+    fecharVisualizadorMidia: function () {
+      const modal = document.getElementById('chatMediaViewerModal');
+      if (modal) {
+        modal.classList.add('hidden');
+      }
+      const body = document.getElementById('chatMediaModalBody');
+      if (body) {
+        body.innerHTML = '';
+      }
+    },
+
+    ajustarZoom: function (delta) {
+      this.mediaViewer.zoom = Math.max(0.5, Math.min(3.0, this.mediaViewer.zoom + delta));
+      this.aplicarTransformacaoMidia();
+    },
+
+    resetarZoom: function () {
+      this.mediaViewer.zoom = 1;
+      this.mediaViewer.rotation = 0;
+      this.aplicarTransformacaoMidia();
+    },
+
+    girarMidia: function () {
+      this.mediaViewer.rotation = (this.mediaViewer.rotation + 90) % 360;
+      this.aplicarTransformacaoMidia();
+    },
+
+    aplicarTransformacaoMidia: function () {
+      const img = document.getElementById('chatMediaImgDisplay');
+      if (img) {
+        img.style.transform = `scale(${this.mediaViewer.zoom}) rotate(${this.mediaViewer.rotation}deg)`;
+      }
+      const zoomVal = document.getElementById('chatMediaZoomVal');
+      if (zoomVal) {
+        zoomVal.textContent = `${Math.round(this.mediaViewer.zoom * 100)}%`;
+      }
+    },
+
+    assegurarModaisChat: function () {
+      if (document.getElementById('chatMediaViewerModal') && document.getElementById('chatDeleteConfirmModal')) {
+        return;
+      }
+
+      // 1. Modal de Visualização Interna de Mídia (Imagens e Documentos sem nova aba)
+      if (!document.getElementById('chatMediaViewerModal')) {
+        const modalMedia = document.createElement('div');
+        modalMedia.id = 'chatMediaViewerModal';
+        modalMedia.className = 'chat-media-modal-overlay hidden';
+        modalMedia.setAttribute('role', 'dialog');
+        modalMedia.setAttribute('aria-modal', 'true');
+        modalMedia.innerHTML = `
+          <div class="chat-media-modal-backdrop" onclick="window.chatUI.fecharVisualizadorMidia()"></div>
+          <div class="chat-media-modal-window">
+            <div class="chat-media-modal-header">
+              <div class="chat-media-modal-info">
+                <i class="bi bi-file-earmark-text chat-media-modal-icon" id="chatMediaModalIcon"></i>
+                <div class="chat-media-modal-titles">
+                  <h4 id="chatMediaModalTitle" class="chat-media-modal-title">Visualizador de Documento</h4>
+                  <span id="chatMediaModalSubtitle" class="chat-media-modal-subtitle"></span>
+                </div>
+              </div>
+              <div class="chat-media-modal-tools" id="chatMediaModalTools">
+                <button type="button" class="btn btn-outline btn-xs" onclick="window.chatUI.ajustarZoom(-0.25)" title="Reduzir zoom"><i class="bi bi-zoom-out"></i></button>
+                <span id="chatMediaZoomVal" class="chat-media-zoom-val">100%</span>
+                <button type="button" class="btn btn-outline btn-xs" onclick="window.chatUI.ajustarZoom(0.25)" title="Aumentar zoom"><i class="bi bi-zoom-in"></i></button>
+                <button type="button" class="btn btn-outline btn-xs" onclick="window.chatUI.resetarZoom()" title="Ajustar à tela"><i class="bi bi-arrows-angle-expand"></i> Ajustar</button>
+                <button type="button" class="btn btn-outline btn-xs" onclick="window.chatUI.girarMidia()" title="Girar 90°"><i class="bi bi-arrow-clockwise"></i></button>
+              </div>
+              <div class="chat-media-modal-actions">
+                <a id="chatMediaDownloadBtn" href="#" download class="btn btn-primary btn-sm chat-media-download-btn">
+                  <i class="bi bi-download"></i> Baixar
+                </a>
+                <button type="button" class="chat-media-close-btn" onclick="window.chatUI.fecharVisualizadorMidia()" title="Fechar visualizador (Esc)">✕</button>
+              </div>
+            </div>
+            <div class="chat-media-modal-body" id="chatMediaModalBody"></div>
+          </div>
+        `;
+        document.body.appendChild(modalMedia);
+      }
+
+      // 2. Modal de Confirmação de Exclusão de Mensagem
+      if (!document.getElementById('chatDeleteConfirmModal')) {
+        const modalDelete = document.createElement('div');
+        modalDelete.id = 'chatDeleteConfirmModal';
+        modalDelete.className = 'chat-confirm-modal-overlay hidden';
+        modalDelete.setAttribute('role', 'dialog');
+        modalDelete.setAttribute('aria-modal', 'true');
+        modalDelete.innerHTML = `
+          <div class="chat-confirm-modal-backdrop" onclick="window.chatUI.fecharModalApagarMensagem()"></div>
+          <div class="chat-confirm-modal-card">
+            <div class="chat-confirm-modal-header">
+              <div class="chat-confirm-modal-icon-wrap">
+                <i class="bi bi-trash3-fill"></i>
+              </div>
+              <div>
+                <h3 class="chat-confirm-modal-title">Apagar mensagem?</h3>
+                <p class="chat-confirm-modal-desc">
+                  O conteúdo e eventuais anexos desta mensagem serão removidos. Por segurança, ela será substituída pelo aviso <strong>"Mensagem apagada"</strong>.
+                </p>
+              </div>
+            </div>
+            <div class="chat-confirm-modal-footer">
+              <button type="button" class="btn btn-outline btn-sm" onclick="window.chatUI.fecharModalApagarMensagem()">
+                Cancelar
+              </button>
+              <button type="button" id="btnConfirmarExclusaoMsg" class="btn btn-danger btn-sm" onclick="window.chatUI.confirmarApagarMensagem()">
+                <i class="bi bi-trash3"></i> Apagar mensagem
+              </button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modalDelete);
+      }
+
+      // Fechar modais ao teclar Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          const mediaModal = document.getElementById('chatMediaViewerModal');
+          if (mediaModal && !mediaModal.classList.contains('hidden')) {
+            this.fecharVisualizadorMidia();
+          }
+          const delModal = document.getElementById('chatDeleteConfirmModal');
+          if (delModal && !delModal.classList.contains('hidden')) {
+            this.fecharModalApagarMensagem();
+          }
+        }
+      });
     }
   };
 
