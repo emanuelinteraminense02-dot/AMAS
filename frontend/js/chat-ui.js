@@ -1068,6 +1068,8 @@
     // ══════════════════════════════════════════════════════════════════
     // VISUALIZADOR INTERNO DE MÍDIA E DOCUMENTOS (SEM ABRIR NOVA ABA)
     // ══════════════════════════════════════════════════════════════════
+    // VISUALIZADOR INTERNO DE MÍDIA E DOCUMENTOS (SEM BLOQUEIOS)
+    // ══════════════════════════════════════════════════════════════════
     abrirVisualizadorMidia: function (encodedUrl, encodedNome, tipo, tamanho) {
       this.assegurarModaisChat();
       const modal = document.getElementById('chatMediaViewerModal');
@@ -1076,6 +1078,7 @@
       const subEl = document.getElementById('chatMediaModalSubtitle');
       const iconEl = document.getElementById('chatMediaModalIcon');
       const toolsEl = document.getElementById('chatMediaModalTools');
+      const rotateBtn = document.getElementById('chatMediaRotateBtn');
       const dlBtn = document.getElementById('chatMediaDownloadBtn');
 
       if (!modal || !body) return;
@@ -1087,9 +1090,16 @@
       this.mediaViewer = {
         zoom: 1,
         rotation: 0,
+        panX: 0,
+        panY: 0,
+        isDragging: false,
+        startX: 0,
+        startY: 0,
         url,
         nome,
-        tipo: tipoClean
+        tipo: tipoClean,
+        pdfDoc: null,
+        pdfScale: 1.2
       };
 
       if (titleEl) titleEl.textContent = nome;
@@ -1102,22 +1112,22 @@
       if (tipoClean === 'imagem') {
         if (iconEl) iconEl.className = 'bi bi-image chat-media-modal-icon';
         if (toolsEl) toolsEl.style.display = 'flex';
-        this.resetarZoom();
+        if (rotateBtn) rotateBtn.style.display = 'inline-flex';
 
         body.innerHTML = `
-          <div class="chat-media-img-viewport" id="chatMediaImgViewport">
-            <img src="${url}" alt="${window.ChatClient.escapeHtml(nome)}" class="chat-media-img-display" id="chatMediaImgDisplay" />
+          <div class="chat-media-img-viewport" id="chatMediaImgViewport" title="Use o scroll do mouse para zoom e arraste com o botão esquerdo para movimentar">
+            <img src="${url}" alt="${window.ChatClient.escapeHtml(nome)}" class="chat-media-img-display" id="chatMediaImgDisplay" draggable="false" />
           </div>
         `;
+
+        this.resetarZoom();
+        this.setupInteracaoImagem();
       } else if (tipoClean === 'pdf') {
         if (iconEl) iconEl.className = 'bi bi-file-earmark-pdf-fill chat-media-modal-icon';
-        if (toolsEl) toolsEl.style.display = 'none';
+        if (toolsEl) toolsEl.style.display = 'flex';
+        if (rotateBtn) rotateBtn.style.display = 'none';
 
-        body.innerHTML = `
-          <div class="chat-media-pdf-wrapper">
-            <iframe src="${url}#toolbar=1" class="chat-media-pdf-frame" title="${window.ChatClient.escapeHtml(nome)}"></iframe>
-          </div>
-        `;
+        this.carregarPdfNoModal(url, nome);
       } else {
         if (iconEl) iconEl.className = 'bi bi-file-earmark-text-fill chat-media-modal-icon';
         if (toolsEl) toolsEl.style.display = 'none';
@@ -1129,8 +1139,8 @@
             </div>
             <h3 class="chat-media-doc-title">${window.ChatClient.escapeHtml(nome)}</h3>
             <p class="chat-media-doc-meta">Documento / Anexo · ${tamanho || ''}</p>
-            <p style="color:#94a3b8;font-size:0.85rem;max-width:320px;margin:0 auto 16px;">
-              Este formato de arquivo pode ser baixado diretamente para visualização completa no seu dispositivo.
+            <p style="color:#94a3b8;font-size:0.85rem;max-width:320px;margin:0 auto 16px;line-height:1.5;">
+              Este formato de arquivo pode ser baixado com total segurança para visualização no seu dispositivo.
             </p>
             <a href="${url}" download="${nome}" class="btn btn-primary btn-md">
               <i class="bi bi-download"></i> Baixar para meu dispositivo
@@ -1142,6 +1152,221 @@
       modal.classList.remove('hidden');
     },
 
+    setupInteracaoImagem: function () {
+      const viewport = document.getElementById('chatMediaImgViewport');
+      const img = document.getElementById('chatMediaImgDisplay');
+      if (!viewport || !img) return;
+
+      // ── 1. Arrastar com o mouse (Pan & Drag) ──
+      const onMouseDown = (e) => {
+        if (e.button !== 0) return;
+        this.mediaViewer.isDragging = true;
+        this.mediaViewer.startX = e.clientX - (this.mediaViewer.panX || 0);
+        this.mediaViewer.startY = e.clientY - (this.mediaViewer.panY || 0);
+        viewport.style.cursor = 'grabbing';
+        img.style.cursor = 'grabbing';
+        e.preventDefault();
+      };
+
+      const onMouseMove = (e) => {
+        if (!this.mediaViewer.isDragging) return;
+        this.mediaViewer.panX = e.clientX - this.mediaViewer.startX;
+        this.mediaViewer.panY = e.clientY - this.mediaViewer.startY;
+        this.aplicarTransformacaoMidia();
+      };
+
+      const onMouseUp = () => {
+        if (this.mediaViewer.isDragging) {
+          this.mediaViewer.isDragging = false;
+          viewport.style.cursor = 'grab';
+          if (img) img.style.cursor = this.mediaViewer.zoom > 1 ? 'grab' : 'pointer';
+        }
+      };
+
+      viewport.addEventListener('mousedown', onMouseDown);
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+
+      this._mouseMoveHandler = onMouseMove;
+      this._mouseUpHandler = onMouseUp;
+
+      // ── 2. Zoom com o Scroll do Mouse (Wheel) ──
+      viewport.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.18 : -0.18;
+        this.ajustarZoom(delta);
+      }, { passive: false });
+
+      // ── 3. Duplo clique para alternar zoom (Fit <-> 2x) ──
+      viewport.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        if (this.mediaViewer.zoom > 1.2) {
+          this.resetarZoom();
+        } else {
+          this.mediaViewer.zoom = 2.0;
+          this.aplicarTransformacaoMidia();
+        }
+      });
+
+      // ── 4. Suporte a toque em Mobile / Tablet (arrastar e pinça) ──
+      let touchStartDist = 0;
+      viewport.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          this.mediaViewer.isDragging = true;
+          this.mediaViewer.startX = e.touches[0].clientX - (this.mediaViewer.panX || 0);
+          this.mediaViewer.startY = e.touches[0].clientY - (this.mediaViewer.panY || 0);
+        } else if (e.touches.length === 2) {
+          this.mediaViewer.isDragging = false;
+          touchStartDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+        }
+      }, { passive: true });
+
+      viewport.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1 && this.mediaViewer.isDragging) {
+          this.mediaViewer.panX = e.touches[0].clientX - this.mediaViewer.startX;
+          this.mediaViewer.panY = e.touches[0].clientY - this.mediaViewer.startY;
+          this.aplicarTransformacaoMidia();
+        } else if (e.touches.length === 2 && touchStartDist > 0) {
+          const dist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          const ratio = dist / touchStartDist;
+          if (ratio > 1.05) {
+            this.ajustarZoom(0.08);
+            touchStartDist = dist;
+          } else if (ratio < 0.95) {
+            this.ajustarZoom(-0.08);
+            touchStartDist = dist;
+          }
+        }
+      }, { passive: true });
+
+      viewport.addEventListener('touchend', () => {
+        this.mediaViewer.isDragging = false;
+        touchStartDist = 0;
+      }, { passive: true });
+    },
+
+    carregarPdfNoModal: async function (url, nome) {
+      const body = document.getElementById('chatMediaModalBody');
+      const toolsEl = document.getElementById('chatMediaModalTools');
+      if (!body) return;
+
+      if (toolsEl) toolsEl.style.display = 'flex';
+
+      body.innerHTML = `
+        <div class="chat-media-pdf-container" id="chatMediaPdfContainer">
+          <div class="chat-media-loading" id="chatMediaPdfSpinner">
+            <i class="bi bi-arrow-repeat spin"></i>
+            <span>Carregando documento PDF...</span>
+          </div>
+          <div class="chat-media-pdf-pages" id="chatMediaPdfPages"></div>
+        </div>
+      `;
+
+      if (!window.pdfjsLib) {
+        this.mostrarFallbackDocumento(url, nome, 'PDF');
+        return;
+      }
+
+      try {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'js/pdf.worker.min.js';
+        const loadingTask = window.pdfjsLib.getDocument({
+          url: url,
+          cMapUrl: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+          cMapPacked: true
+        });
+
+        const pdf = await loadingTask.promise;
+        this.mediaViewer.pdfDoc = pdf;
+        this.mediaViewer.pdfScale = 1.2;
+        await this.renderizarPaginasPdf();
+      } catch (err) {
+        console.error('Erro ao renderizar PDF em canvas:', err);
+        this.mostrarFallbackDocumento(url, nome, 'PDF');
+      }
+    },
+
+    renderizarPaginasPdf: async function () {
+      const pdf = this.mediaViewer.pdfDoc;
+      const pagesContainer = document.getElementById('chatMediaPdfPages');
+      const spinner = document.getElementById('chatMediaPdfSpinner');
+      const zoomVal = document.getElementById('chatMediaZoomVal');
+      if (!pdf || !pagesContainer) return;
+
+      pagesContainer.innerHTML = '';
+      if (spinner) spinner.style.display = 'flex';
+      if (zoomVal) zoomVal.textContent = `${Math.round(this.mediaViewer.pdfScale * 100)}%`;
+
+      try {
+        const numPages = pdf.numPages;
+        for (let i = 1; i <= numPages; i++) {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: this.mediaViewer.pdfScale });
+
+          const pageWrap = document.createElement('div');
+          pageWrap.className = 'chat-pdf-page-wrap';
+
+          if (numPages > 1) {
+            const pageNum = document.createElement('div');
+            pageNum.className = 'chat-pdf-page-num';
+            pageNum.textContent = `Página ${i} de ${numPages}`;
+            pageWrap.appendChild(pageNum);
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.className = 'chat-pdf-canvas';
+
+          const outputScale = window.devicePixelRatio || 1;
+          canvas.width = Math.floor(viewport.width * outputScale);
+          canvas.height = Math.floor(viewport.height * outputScale);
+          canvas.style.width = `${Math.floor(viewport.width)}px`;
+          canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+          const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+          await page.render({
+            canvasContext: canvas.getContext('2d'),
+            transform,
+            viewport
+          }).promise;
+
+          pageWrap.appendChild(canvas);
+          pagesContainer.appendChild(pageWrap);
+        }
+      } catch (err) {
+        console.error('Erro na renderização das páginas PDF:', err);
+      } finally {
+        if (spinner) spinner.style.display = 'none';
+      }
+    },
+
+    mostrarFallbackDocumento: function (url, nome, tipo) {
+      const body = document.getElementById('chatMediaModalBody');
+      const toolsEl = document.getElementById('chatMediaModalTools');
+      if (!body) return;
+      if (toolsEl) toolsEl.style.display = 'none';
+
+      body.innerHTML = `
+        <div class="chat-media-doc-card">
+          <div class="chat-media-doc-icon">
+            <i class="bi bi-file-earmark-pdf-fill" style="color:#ef4444;"></i>
+          </div>
+          <h3 class="chat-media-doc-title">${window.ChatClient.escapeHtml(nome)}</h3>
+          <p class="chat-media-doc-meta">${tipo} · Pronto para acesso seguro</p>
+          <p style="color:#94a3b8;font-size:0.85rem;max-width:340px;margin:0 auto 16px;line-height:1.5;">
+            Clique no botão abaixo para baixar ou visualizar o documento no seu dispositivo com total integridade.
+          </p>
+          <a href="${url}" download="${nome}" class="btn btn-primary btn-md">
+            <i class="bi bi-download"></i> Baixar documento agora
+          </a>
+        </div>
+      `;
+    },
+
     fecharVisualizadorMidia: function () {
       const modal = document.getElementById('chatMediaViewerModal');
       if (modal) {
@@ -1151,32 +1376,68 @@
       if (body) {
         body.innerHTML = '';
       }
+      if (this._mouseMoveHandler) {
+        window.removeEventListener('mousemove', this._mouseMoveHandler);
+        this._mouseMoveHandler = null;
+      }
+      if (this._mouseUpHandler) {
+        window.removeEventListener('mouseup', this._mouseUpHandler);
+        this._mouseUpHandler = null;
+      }
+      this.mediaViewer.isDragging = false;
+      this.mediaViewer.pdfDoc = null;
     },
 
     ajustarZoom: function (delta) {
-      this.mediaViewer.zoom = Math.max(0.5, Math.min(3.0, this.mediaViewer.zoom + delta));
-      this.aplicarTransformacaoMidia();
+      if (this.mediaViewer.tipo === 'imagem') {
+        this.mediaViewer.zoom = Math.max(0.4, Math.min(5.0, parseFloat((this.mediaViewer.zoom + delta).toFixed(2))));
+        if (this.mediaViewer.zoom <= 1) {
+          this.mediaViewer.panX = (this.mediaViewer.panX || 0) * 0.7;
+          this.mediaViewer.panY = (this.mediaViewer.panY || 0) * 0.7;
+        }
+        this.aplicarTransformacaoMidia();
+      } else if (this.mediaViewer.tipo === 'pdf') {
+        if (!this.mediaViewer.pdfDoc) return;
+        this.mediaViewer.pdfScale = Math.max(0.5, Math.min(3.0, parseFloat((this.mediaViewer.pdfScale + delta).toFixed(2))));
+        this.renderizarPaginasPdf();
+      }
     },
 
     resetarZoom: function () {
-      this.mediaViewer.zoom = 1;
-      this.mediaViewer.rotation = 0;
-      this.aplicarTransformacaoMidia();
+      if (this.mediaViewer.tipo === 'imagem') {
+        this.mediaViewer.zoom = 1;
+        this.mediaViewer.rotation = 0;
+        this.mediaViewer.panX = 0;
+        this.mediaViewer.panY = 0;
+        this.aplicarTransformacaoMidia();
+      } else if (this.mediaViewer.tipo === 'pdf') {
+        this.mediaViewer.pdfScale = 1.2;
+        this.renderizarPaginasPdf();
+      }
     },
 
     girarMidia: function () {
-      this.mediaViewer.rotation = (this.mediaViewer.rotation + 90) % 360;
-      this.aplicarTransformacaoMidia();
+      if (this.mediaViewer.tipo === 'imagem') {
+        this.mediaViewer.rotation = (this.mediaViewer.rotation + 90) % 360;
+        this.aplicarTransformacaoMidia();
+      }
     },
 
     aplicarTransformacaoMidia: function () {
-      const img = document.getElementById('chatMediaImgDisplay');
-      if (img) {
-        img.style.transform = `scale(${this.mediaViewer.zoom}) rotate(${this.mediaViewer.rotation}deg)`;
-      }
-      const zoomVal = document.getElementById('chatMediaZoomVal');
-      if (zoomVal) {
-        zoomVal.textContent = `${Math.round(this.mediaViewer.zoom * 100)}%`;
+      if (this.mediaViewer.tipo === 'imagem') {
+        const img = document.getElementById('chatMediaImgDisplay');
+        if (img) {
+          const panX = this.mediaViewer.panX || 0;
+          const panY = this.mediaViewer.panY || 0;
+          const zoom = this.mediaViewer.zoom || 1;
+          const rot = this.mediaViewer.rotation || 0;
+          img.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom}) rotate(${rot}deg)`;
+          img.style.cursor = this.mediaViewer.isDragging ? 'grabbing' : (zoom > 1 ? 'grab' : 'pointer');
+        }
+        const zoomVal = document.getElementById('chatMediaZoomVal');
+        if (zoomVal) {
+          zoomVal.textContent = `${Math.round(this.mediaViewer.zoom * 100)}%`;
+        }
       }
     },
 
@@ -1208,7 +1469,7 @@
                 <span id="chatMediaZoomVal" class="chat-media-zoom-val">100%</span>
                 <button type="button" class="btn btn-outline btn-xs" onclick="window.chatUI.ajustarZoom(0.25)" title="Aumentar zoom"><i class="bi bi-zoom-in"></i></button>
                 <button type="button" class="btn btn-outline btn-xs" onclick="window.chatUI.resetarZoom()" title="Ajustar à tela"><i class="bi bi-arrows-angle-expand"></i> Ajustar</button>
-                <button type="button" class="btn btn-outline btn-xs" onclick="window.chatUI.girarMidia()" title="Girar 90°"><i class="bi bi-arrow-clockwise"></i></button>
+                <button type="button" class="btn btn-outline btn-xs" id="chatMediaRotateBtn" onclick="window.chatUI.girarMidia()" title="Girar 90°"><i class="bi bi-arrow-clockwise"></i></button>
               </div>
               <div class="chat-media-modal-actions">
                 <a id="chatMediaDownloadBtn" href="#" download class="btn btn-primary btn-sm chat-media-download-btn">

@@ -47,6 +47,8 @@ public class ChatService {
     }
 
     /**
+     * Verifica se a mensagem foi enviada por um administrador.
+     */
     public static boolean isMsgAdmin(ChatMensagem m) {
         if (m == null) return false;
         String perfil = m.getSenderPerfil() != null ? m.getSenderPerfil().trim().toLowerCase() : "";
@@ -184,7 +186,7 @@ public class ChatService {
 
             // Mensagens enviadas pelo admin NUNCA contam como não lidas para o admin
             long naoLidas = msgsCanal.stream()
-                    .filter(m -> !isMsgAdmin(m) && !Boolean.TRUE.equals(m.getLida()))
+                    .filter(m -> !isMsgAdmin(m) && !Boolean.TRUE.equals(m.getLida()) && !Boolean.TRUE.equals(m.getApagada()))
                     .count();
 
             Map<String, Object> item = new LinkedHashMap<>();
@@ -216,7 +218,7 @@ public class ChatService {
 
             // Mensagens enviadas pelo admin NUNCA contam como não lidas para o admin
             long naoLidas = msgsCanal.stream()
-                    .filter(m -> !isMsgAdmin(m) && !Boolean.TRUE.equals(m.getLida()))
+                    .filter(m -> !isMsgAdmin(m) && !Boolean.TRUE.equals(m.getLida()) && !Boolean.TRUE.equals(m.getApagada()))
                     .count();
 
             Map<String, Object> empResp = empresarioPayloadMapper.toResponse(u);

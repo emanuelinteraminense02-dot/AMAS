@@ -1383,29 +1383,96 @@ html[data-theme="dark"] .chat-search-category-header,
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: auto;
-  padding: 16px;
+  overflow: hidden;
+  position: relative;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.chat-media-img-viewport:active {
+  cursor: grabbing;
 }
 
 .chat-media-img-display {
   max-width: 90%;
   max-height: 90%;
   object-fit: contain;
-  transition: transform 0.15s ease-out;
+  transition: transform 0.05s ease-out;
   border-radius: 8px;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  cursor: grab;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
-.chat-media-pdf-wrapper {
+/* ─── Visualizador Canvas de PDF (Segurança contra bloqueio do Microsoft Edge) ─── */
+.chat-media-pdf-container {
   width: 100%;
   height: 100%;
+  overflow-y: auto;
+  overflow-x: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px;
+  background: #0b0e1d;
 }
 
-.chat-media-pdf-frame {
+.chat-media-pdf-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
   width: 100%;
-  height: 100%;
-  border: none;
+}
+
+.chat-pdf-page-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.chat-pdf-page-num {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.chat-pdf-canvas {
   background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.55);
+  max-width: 100%;
+  display: block;
+}
+
+.chat-media-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #cf941d;
+  font-size: 0.9rem;
+  padding: 40px;
+}
+
+.chat-media-loading i {
+  font-size: 2rem;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+[data-theme="light"] .chat-media-pdf-container {
+  background: #f1f5f9;
 }
 
 .chat-media-doc-card {
