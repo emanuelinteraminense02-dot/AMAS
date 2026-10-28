@@ -7,6 +7,7 @@ import com.br.amas.demo.repository.AssociadoRepository;
 import com.br.amas.demo.repository.ContribuicaoRepository;
 import com.br.amas.demo.repository.InscricaoEventoRepository;
 import com.br.amas.demo.repository.ParcelaAtrasoRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
