@@ -7,7 +7,7 @@ import com.br.amas.demo.repository.AssociadoRepository;
 import com.br.amas.demo.repository.ContribuicaoRepository;
 import com.br.amas.demo.repository.InscricaoEventoRepository;
 import com.br.amas.demo.repository.ParcelaAtrasoRepository;
-import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +23,7 @@ public class AssociadoService {
     private final ParcelaAtrasoRepository parcelaAtrasoRepository;
     private final InscricaoEventoRepository inscricaoEventoRepository;
     private final LogService logService;
+    private final PasswordEncoder passwordEncoder;
 
     public List<Associado> listarTodos() {
         return associadoRepository.findAll();
@@ -47,7 +48,8 @@ public class AssociadoService {
         }
 
         associado.setDataEntrada(associado.getDataEntrada() != null ? associado.getDataEntrada() : LocalDate.now());
-        associado.setSenha((associado.getSenha() == null || associado.getSenha().isBlank()) ? "123456" : associado.getSenha());
+        String rawSenha = (associado.getSenha() == null || associado.getSenha().isBlank()) ? "123456" : associado.getSenha();
+        associado.setSenha(rawSenha.startsWith("$2") ? rawSenha : passwordEncoder.encode(rawSenha));
         associado.setPrimeiroLogin(associado.getPrimeiroLogin() == null || associado.getPrimeiroLogin());
         associado.setSenhaExpirada(Boolean.TRUE.equals(associado.getSenhaExpirada()));
         associado.setResetSolicitado(Boolean.TRUE.equals(associado.getResetSolicitado()));
@@ -111,7 +113,8 @@ public class AssociadoService {
         }
 
         if (dados.getSenha() != null && !dados.getSenha().isBlank()) {
-            existente.setSenha(dados.getSenha());
+            String s = dados.getSenha();
+            existente.setSenha(s.startsWith("$2") ? s : passwordEncoder.encode(s));
         }
 
         if (dados.getPrimeiroLogin() != null) {

@@ -71,17 +71,39 @@ public class ChatService {
             throw new IllegalArgumentException("channelId é obrigatório para enviar mensagem.");
         }
 
+        org.springframework.security.core.Authentication auth =
+                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+
         String senderId = (String) payload.getOrDefault("senderId", "anonimo");
         String senderNome = (String) payload.getOrDefault("senderNome", "Usuário");
         String senderPerfil = (String) payload.getOrDefault("senderPerfil", "associado");
         String texto = (String) payload.getOrDefault("texto", "");
 
-        // Normalização garantida: se perfil ou id for admin, padroniza
-        if ("admin".equalsIgnoreCase(senderPerfil) || "admin".equalsIgnoreCase(senderId) || senderNome.toLowerCase().contains("administra")) {
-            senderPerfil = "admin";
-            senderId = "admin";
-            if (senderNome == null || senderNome.isBlank() || "Usuário".equals(senderNome)) {
-                senderNome = "Administração AMAS";
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getPrincipal())) {
+            String emailAuth = auth.getName();
+            Optional<Usuario> usuOpt = usuarioRepository.findByEmail(emailAuth.toLowerCase());
+            if (usuOpt.isPresent()) {
+                Usuario u = usuOpt.get();
+                senderId = "admin".equalsIgnoreCase(u.getPerfil()) ? "admin" : "emp_" + u.getId();
+                senderNome = u.getNome();
+                senderPerfil = u.getPerfil();
+            } else {
+                Optional<Associado> assocOpt = associadoRepository.findByEmail(emailAuth.toLowerCase());
+                if (assocOpt.isPresent()) {
+                    Associado a = assocOpt.get();
+                    senderId = "assoc_" + a.getId();
+                    senderNome = a.getNome();
+                    senderPerfil = "associado";
+                }
+            }
+        } else {
+            // Em chamadas sem Bearer token, proibir terminantemente forjar perfil de administrador
+            if ("admin".equalsIgnoreCase(senderPerfil) || "admin".equalsIgnoreCase(senderId)) {
+                log.warn("[CHAT SECURITY] Bloqueada tentativa de forjar remetente admin sem autenticação JWT.");
+                senderPerfil = "associado";
+                if ("admin".equalsIgnoreCase(senderId)) {
+                    senderId = "anonimo";
+                }
             }
         }
 

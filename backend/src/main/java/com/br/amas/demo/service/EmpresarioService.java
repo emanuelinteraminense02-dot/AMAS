@@ -7,6 +7,7 @@ import com.br.amas.demo.repository.AlertaEmpresarioRepository;
 import com.br.amas.demo.repository.ContribuicaoEmpresarioRepository;
 import com.br.amas.demo.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class EmpresarioService {
     private final MotorFinanceiroService motorFinanceiro;
     private final LogService logService;
     private final EmpresarioPayloadMapper empresarioPayloadMapper;
+    private final PasswordEncoder passwordEncoder;
 
     public List<Usuario> listarTodos() {
         return usuarioRepository.findByPerfil("empresario");
@@ -60,9 +62,8 @@ public class EmpresarioService {
             throw new RuntimeException("CNPJ já cadastrado.");
         }
 
-        if (usuario.getSenha() == null || usuario.getSenha().isBlank()) {
-            usuario.setSenha("123456");
-        }
+        String rawSenha = (usuario.getSenha() == null || usuario.getSenha().isBlank()) ? "123456" : usuario.getSenha();
+        usuario.setSenha(rawSenha.startsWith("$2") ? rawSenha : passwordEncoder.encode(rawSenha));
 
         usuario.setPerfil("empresario");
         usuario.setPrimeiroLogin(usuario.getPrimeiroLogin() == null || usuario.getPrimeiroLogin());
@@ -93,7 +94,10 @@ public class EmpresarioService {
         }
 
         if (dados.containsKey("senha") && dados.get("senha") != null) {
-            existente.setSenha(dados.get("senha").toString());
+            String s = dados.get("senha").toString().trim();
+            if (!s.isBlank()) {
+                existente.setSenha(s.startsWith("$2") ? s : passwordEncoder.encode(s));
+            }
         }
 
         if (dados.containsKey("telefone")) {

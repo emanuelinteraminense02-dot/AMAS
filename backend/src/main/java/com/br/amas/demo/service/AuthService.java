@@ -1,10 +1,13 @@
 package com.br.amas.demo.service;
 
+import com.br.amas.demo.config.JwtService;
 import com.br.amas.demo.model.Associado;
 import com.br.amas.demo.model.Usuario;
 import com.br.amas.demo.repository.AssociadoRepository;
 import com.br.amas.demo.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -13,15 +16,31 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthService {
 
     private final UsuarioRepository usuarioRepository;
     private final AssociadoRepository associadoRepository;
     private final LogService logService;
     private final EmpresarioPayloadMapper empresarioPayloadMapper;
+    private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     /**
-     * Autentica admin, empresário ou associado.
+     * Valida senha considerando hash BCrypt ou suporte a migração progressiva de senha legada.
+     */
+    private boolean verificarSenha(String senhaInformada, String hashOuPlano) {
+        if (senhaInformada == null || hashOuPlano == null) {
+            return false;
+        }
+        if (hashOuPlano.startsWith("$2a$") || hashOuPlano.startsWith("$2b$") || hashOuPlano.startsWith("$2y$")) {
+            return passwordEncoder.matches(senhaInformada, hashOuPlano);
+        }
+        return hashOuPlano.equals(senhaInformada);
+    }
+
+    /**
+     * Autentica admin, empresário ou associado e emite token JWT JJWT 0.12.6.
      */
     public Map<String, Object> autenticar(String email, String senha) {
 
@@ -41,7 +60,13 @@ public class AuthService {
 
             Usuario u = usuOpt.get();
 
-            if (u.getSenha().equals(senha)) {
+            if (verificarSenha(senha, u.getSenha())) {
+
+                // Migração progressiva: se ainda em texto puro, criptografa com BCrypt
+                if (u.getSenha() != null && !u.getSenha().startsWith("$2")) {
+                    u.setSenha(passwordEncoder.encode(senha));
+                    usuarioRepository.save(u);
+                }
 
                 logService.registrar(
                         "Login realizado",
@@ -50,7 +75,10 @@ public class AuthService {
                         "Acesso ao painel de " + u.getPerfil()
                 );
 
-                return usuarioParaMap(u);
+                Map<String, Object> resp = usuarioParaMap(u);
+                String token = jwtService.gerarToken(u.getId(), u.getEmail(), u.getNome(), u.getPerfil());
+                resp.put("token", token);
+                return resp;
             }
         }
 
@@ -58,14 +86,19 @@ public class AuthService {
         // ASSOCIADO
         // =========================================================
 
-        Optional<Associado> assocOpt =
-                associadoRepository.findByEmail(emailNorm);
+        Optional<Associado> assocOpt = associadoRepository.findByEmail(emailNorm);
 
         if (assocOpt.isPresent()) {
 
             Associado a = assocOpt.get();
 
-            if (a.getSenha().equals(senha)) {
+            if (verificarSenha(senha, a.getSenha())) {
+
+                // Migração progressiva: se ainda em texto puro, criptografa com BCrypt
+                if (a.getSenha() != null && !a.getSenha().startsWith("$2")) {
+                    a.setSenha(passwordEncoder.encode(senha));
+                    associadoRepository.save(a);
+                }
 
                 logService.registrar(
                         "Login realizado",
@@ -74,7 +107,10 @@ public class AuthService {
                         "Acesso ao painel do associado"
                 );
 
-                return associadoParaMap(a);
+                Map<String, Object> resp = associadoParaMap(a);
+                String token = jwtService.gerarToken(a.getId(), a.getEmail(), a.getNome(), "associado");
+                resp.put("token", token);
+                return resp;
             }
         }
 
@@ -82,10 +118,7 @@ public class AuthService {
     }
 
     /**
-     * Altera a senha do associado.
-     *
-     * Se senhaAtual for null ou vazia, permite redefinição
-     * obrigatória no primeiro login.
+     * Altera a senha do associado de forma segura com validação rigorosa.
      */
     public void alterarSenha(
             Long associadoId,
@@ -102,18 +135,24 @@ public class AuthService {
                         new RuntimeException("Associado não encontrado.")
                 );
 
-        /*
-         * Quando senhaAtual não foi enviada, trata como redefinição
-         * obrigatória.
-         */
-        if (senhaAtual != null
-                && !senhaAtual.isBlank()
-                && !a.getSenha().equals(senhaAtual)) {
+        boolean trocaObrigatoria = Boolean.TRUE.equals(a.getPrimeiroLogin())
+                || Boolean.TRUE.equals(a.getSenhaExpirada())
+                || Boolean.TRUE.equals(a.getResetSolicitado());
 
-            throw new RuntimeException("Senha atual incorreta.");
+        if (!trocaObrigatoria) {
+            if (senhaAtual == null || senhaAtual.isBlank()) {
+                throw new RuntimeException("A senha atual é obrigatória para alteração de senha.");
+            }
+            if (!verificarSenha(senhaAtual, a.getSenha())) {
+                throw new RuntimeException("Senha atual incorreta.");
+            }
+        } else if (senhaAtual != null && !senhaAtual.isBlank()) {
+            if (!verificarSenha(senhaAtual, a.getSenha())) {
+                throw new RuntimeException("Senha atual incorreta.");
+            }
         }
 
-        a.setSenha(novaSenha);
+        a.setSenha(passwordEncoder.encode(novaSenha));
         a.setPrimeiroLogin(false);
         a.setSenhaExpirada(false);
         a.setResetSolicitado(false);
