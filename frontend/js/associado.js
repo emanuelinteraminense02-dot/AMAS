@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (sec === "historico")   renderHistorico();
       if (sec === "carteirinha") renderCarteirinha();
       if (sec === "parceiros")   window.renderCatalogoParceiros?.();
-      if (sec === "eventos")     renderEventosAssoc();
+      if (sec === "eventos")     window.renderEventosAssoc?.();
       renderStatusChip();
       if (window.amasSidebar) {
         window.amasSidebar.close();
@@ -734,6 +734,9 @@ document.addEventListener("DOMContentLoaded", () => {
       else el.classList.add("hidden");
     } catch (_) {}
   }
+
+  // Expõe a função para o menu lateral (que fica em outro bloco) — corrige a lista vazia em "Meus Eventos" (AN-14)
+  window.renderEventosAssoc = renderEventosAssoc;
 
   async function renderEventosAssoc() {
     const sessao = getSessao();
