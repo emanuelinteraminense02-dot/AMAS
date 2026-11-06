@@ -33,7 +33,7 @@ export function RecuperacaoSection({ adminNome }: RecuperacaoSectionProps) {
   function confirmarReset(p: ResetPendente) {
     Alert.alert(
       'Resetar senha',
-      `Resetar a senha de ${p.nome}?\nSenha será redefinida para "123456" e o usuário deverá trocá-la no próximo acesso.`,
+      `Gerar uma senha temporária para ${p.nome}?\nO usuário deverá trocá-la no próximo acesso.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         {
@@ -42,8 +42,9 @@ export function RecuperacaoSection({ adminNome }: RecuperacaoSectionProps) {
           onPress: async () => {
             setProcessandoId(p.id);
             try {
-              await processarResetAdmin(p.id, p._colecao, adminNome);
+              const res = await processarResetAdmin(p.id, p._colecao, adminNome);
               await carregar();
+              if (res?.senhaTemporaria) Alert.alert('Senha temporária', `Envie a ${p.nome} por um canal seguro: ${res.senhaTemporaria}`);
             } catch (e) {
               Alert.alert('Erro', e instanceof Error ? e.message : 'Não foi possível resetar.');
             } finally {
@@ -68,7 +69,7 @@ export function RecuperacaoSection({ adminNome }: RecuperacaoSectionProps) {
   return (
     <View style={{ gap: spacing.md }}>
       <Text style={styles.aviso}>
-        ⚠️ Ao confirmar, a senha será redefinida para "123456" e o usuário precisará trocá-la no próximo login.
+        ⚠️ Ao confirmar, o sistema gera uma senha temporária, que o usuário precisará trocar no próximo login.
       </Text>
 
       {pendentes.map((p) => (
@@ -90,7 +91,7 @@ export function RecuperacaoSection({ adminNome }: RecuperacaoSectionProps) {
           </View>
 
           <AdminButton
-            label="Resetar senha para 123456"
+            label="Gerar senha temporária"
             icon="key-outline"
             variant="danger"
             small

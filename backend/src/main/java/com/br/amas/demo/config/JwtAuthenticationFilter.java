@@ -64,7 +64,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         null,
                         authorities
                 );
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                java.util.Map<String, Object> detalhes = new java.util.HashMap<>();
+                detalhes.put("id", jwtService.extrairId(token));
+                detalhes.put("perfil", perfil != null ? perfil.toLowerCase() : "associado");
+                detalhes.put("ip", request.getRemoteAddr());
+                authentication.setDetails(detalhes);
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }

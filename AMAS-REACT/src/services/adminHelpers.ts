@@ -2,7 +2,7 @@
 // de frontend/js/database.js que combinam múltiplas chamadas de api.js
 // (ex.: checar duplicidade de CPF, resets pendentes, inscrições de evento).
 
-import {
+import { apiAdmin,
   apiAssociados,
   apiEmpresarios,
   apiEventos,
@@ -86,16 +86,10 @@ export async function getResetsPendentes(): Promise<ResetPendente[]> {
 }
 
 export async function processarResetAdmin(id: number, colecao: 'associados' | 'usuarios', nomeAdmin?: string) {
-  const campos = { senha: '123456', senhaExpirada: true, resetSolicitado: false, dataResetSolicit: null };
-  if (colecao === 'associados') {
-    const a = (await apiAssociados.buscarPorId(id)) as Associado;
-    await apiAssociados.atualizar(id, { ...a, ...campos });
-    registrarLog('Senha resetada pelo Admin', nomeAdmin || 'Admin', 'admin', `${a?.nome || ''} — senha voltou ao padrão`);
-  } else {
-    const u = (await apiEmpresarios.buscarPorId(id)) as Empresario;
-    await apiEmpresarios.atualizar(id, { ...u, ...campos });
-    registrarLog('Senha resetada pelo Admin', nomeAdmin || 'Admin', 'admin', `${u?.nome || ''} — senha voltou ao padrão`);
-  }
+  // O servidor gera uma senha temporária aleatória (substitui a antiga senha padrão 123456)
+  const res = await apiAdmin.redefinirSenha(colecao, id);
+  registrarLog('Senha redefinida pelo Admin', nomeAdmin || 'Admin', 'admin', `${res?.nome || ''} — senha temporária gerada`);
+  return res;
 }
 
 /* ─── Eventos + inscrições (visão administrativa) ───────────────── */

@@ -97,7 +97,7 @@ onReady(() => {
             document.getElementById("esqueciForm")?.classList.add("hidden");
             const ok = document.getElementById("esqueciOk");
             if (ok) {
-                ok.innerHTML = `<p>Solicitação enviada para <strong>${res.nome}</strong> (${res.tipo}).<br>Aguarde o administrador processar o reset.</p>`;
+                ok.innerHTML = `<p>${res.mensagem || 'Solicitação enviada.'}<br>Aguarde o administrador processar o pedido.</p>`;
                 ok.classList.remove("hidden");
             }
         });

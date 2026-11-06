@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { apiAdmin, apiEventos, apiNoticias, apiProjetos } from '@/services/api';
+import { apiEventos, apiNoticias, apiProjetos, apiPublico } from '@/services/api';
 import type { Estatisticas, Evento, Noticia, Projeto } from '@/types';
 
 interface HomeData {
@@ -33,7 +33,7 @@ export function useHomeData(): HomeData {
     else setLoading(true);
 
     const [statsRes, noticiasRes, eventosRes, projetosRes] = await Promise.allSettled([
-      apiAdmin.getDashboard() as Promise<Estatisticas>,
+      apiPublico.estatisticas() as Promise<Estatisticas>,
       apiNoticias.listar() as Promise<Noticia[]>,
       apiEventos.listar() as Promise<Evento[]>,
       apiProjetos.listarEmAndamento() as Promise<Projeto[]>,

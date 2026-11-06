@@ -2,6 +2,7 @@ package com.br.amas.demo.controller;
 
 import com.br.amas.demo.model.Evento;
 import com.br.amas.demo.service.EventoService;
+import com.br.amas.demo.config.Acesso;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,6 +15,7 @@ import java.util.Map;
 public class EventoController {
 
     private final EventoService eventoService;
+    private final Acesso acesso;
 
     @GetMapping
     public ResponseEntity<?> listar() {
@@ -53,6 +55,7 @@ public class EventoController {
     @PostMapping("/{id}/inscrever")
     public ResponseEntity<?> inscrever(@PathVariable Long id,
                                        @RequestBody Map<String, Long> body) {
+        acesso.exigirAdminOuAssociado(body.get("associadoId"));
         try {
             return ResponseEntity.ok(eventoService.inscrever(id, body.get("associadoId")));
         } catch (RuntimeException e) {
@@ -64,6 +67,7 @@ public class EventoController {
     @DeleteMapping("/{eventoId}/inscrever/{associadoId}")
     public ResponseEntity<?> cancelarInscricao(@PathVariable Long eventoId,
                                                @PathVariable Long associadoId) {
+        acesso.exigirAdminOuAssociado(associadoId);
         try {
             eventoService.cancelarInscricao(eventoId, associadoId);
             return ResponseEntity.ok(Map.of("mensagem", "Inscrição cancelada."));
@@ -81,6 +85,7 @@ public class EventoController {
     /** Lista todos os eventos em que um associado está inscrito ou na fila. */
     @GetMapping("/inscritos/associado/{associadoId}")
     public ResponseEntity<?> inscricoesPorAssociado(@PathVariable Long associadoId) {
+        acesso.exigirAdminOuAssociado(associadoId);
         return ResponseEntity.ok(eventoService.listarInscricoesPorAssociado(associadoId));
     }
 }

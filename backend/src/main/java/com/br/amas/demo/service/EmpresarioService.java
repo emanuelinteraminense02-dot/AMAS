@@ -62,7 +62,12 @@ public class EmpresarioService {
             throw new RuntimeException("CNPJ já cadastrado.");
         }
 
-        String rawSenha = (usuario.getSenha() == null || usuario.getSenha().isBlank()) ? "123456" : usuario.getSenha();
+        String rawSenha = usuario.getSenha();
+        if (rawSenha == null || rawSenha.isBlank()) {
+            rawSenha = SenhaTemporaria.gerar();
+            usuario.setSenhaTemporaria(rawSenha);
+            usuario.setPrimeiroLogin(true);
+        }
         usuario.setSenha(rawSenha.startsWith("$2") ? rawSenha : passwordEncoder.encode(rawSenha));
 
         usuario.setPerfil("empresario");

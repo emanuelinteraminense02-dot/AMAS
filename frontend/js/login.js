@@ -936,11 +936,8 @@ document.addEventListener(
                       if (esqueciOk) {
 
                         esqueciOk.innerHTML =
-                            "<p>Solicitação enviada para <strong>" +
-                            res.nome +
-                            "</strong> (" +
-                            res.tipo +
-                            ").<br>Aguarde o administrador processar o reset.</p>";
+                            "<p>" + (res.mensagem || "Solicitação enviada.") +
+                            "<br>Aguarde o administrador processar o pedido.</p>";
 
                         esqueciOk.classList.remove(
                             "hidden"
@@ -1213,10 +1210,9 @@ document.addEventListener(
 
                     if (nomeSucesso) {
 
-                      nomeSucesso.textContent =
-                          "Solicitação enviada para " +
-                          res.nome +
-                          "!";
+                      nomeSucesso.textContent = res.nome
+                          ? "Solicitação enviada para " + res.nome + "!"
+                          : "Solicitação enviada!";
                     }
 
 

@@ -207,6 +207,10 @@ const apiDelete = (path) =>
 
 const apiAuth = {
 
+    /* Pedido público de redefinição de senha (não exige login) */
+    esqueciSenha: (email) =>
+        apiPost("/auth/esqueci-senha", { email: email }),
+
     login: function (email, senha) {
 
         return apiPost(
@@ -356,6 +360,10 @@ const apiAssociados = {
     listar: () =>
         apiGet("/associados"),
 
+    /* Consulta mínima por CPF, usada pelas empresas parceiras */
+    consultarCpf: (cpf) =>
+        apiGet(`/associados/consulta-cpf?cpf=${encodeURIComponent(cpf)}`),
+
     buscarPorId: (id) =>
         apiGet(`/associados/${id}`),
 
@@ -498,6 +506,10 @@ const apiAdmin = {
     getDashboard: () =>
         apiGet("/admin/dashboard"),
 
+    /* Gera senha temporária para associado ("associados") ou empresa ("usuarios") */
+    redefinirSenha: (colecao, id) =>
+        apiPost(`/admin/senhas/${colecao}/${id}/redefinir`, {}),
+
     getLog: () =>
         apiGet("/admin/log"),
 
@@ -529,6 +541,16 @@ const apiAdmin = {
                 observacoes: motivo || ""
             }
         )
+
+};
+
+
+/* ─── Dados públicos (sem login) ─────────────────────────────────── */
+
+const apiPublico = {
+
+    estatisticas: () =>
+        apiGet("/publico/estatisticas")
 
 };
 

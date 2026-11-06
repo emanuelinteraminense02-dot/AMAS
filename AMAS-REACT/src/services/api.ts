@@ -84,6 +84,8 @@ export const apiLog = {
 /* ─── Associados ──────────────────────────────────────────────── */
 export const apiAssociados = {
   listar: () => apiGet('/associados'),
+  /** Consulta mínima por CPF (empresas parceiras): nome, matrícula, situação e benefício. */
+  consultarCpf: (cpf: string) => apiGet(`/associados/consulta-cpf?cpf=${encodeURIComponent(cpf)}`),
   buscarPorId: (id: number) => apiGet(`/associados/${id}`),
   criar: (dados: unknown) => apiPost('/associados', dados),
   atualizar: (id: number, dados: unknown) => apiPut(`/associados/${id}`, dados),
@@ -115,6 +117,9 @@ export const apiEmpresarios = {
 /* ─── Admin ───────────────────────────────────────────────────── */
 export const apiAdmin = {
   getDashboard: () => apiGet('/admin/dashboard'),
+  /** Gera senha temporária (associados ou usuarios) e obriga a troca no próximo acesso. */
+  redefinirSenha: (colecao: 'associados' | 'usuarios', id: number) =>
+    apiPost<{ nome: string; senhaTemporaria: string }>(`/admin/senhas/${colecao}/${id}/redefinir`, {}),
   getLog: () => apiGet('/admin/log'),
   getAlertas: () => apiGet('/admin/alertas-empresario'),
   marcarAlertaLido: (id: number) => apiPatch(`/admin/alertas-empresario/${id}/lido`, {}),
@@ -122,6 +127,11 @@ export const apiAdmin = {
   aprovarSolicitacao: (id: number) => apiPost(`/admin/solicitacoes/${id}/aprovar`, {}),
   recusarSolicitacao: (id: number, motivo?: string) =>
     apiPost(`/admin/solicitacoes/${id}/recusar`, { observacoes: motivo || '' }),
+};
+
+/* ─── Dados públicos (sem login) ────────────────────────────────── */
+export const apiPublico = {
+  estatisticas: () => apiGet('/publico/estatisticas'),
 };
 
 /* ─── Solicitações públicas ─────────────────────────────────────── */
@@ -162,28 +172,14 @@ export const apiProjetos = {
 
 /* ─── Recuperação de senha (fluxo público) ──────────────────────── */
 export const apiRecuperacao = {
-  // Busca o usuário por email em associados e empresários, marca resetSolicitado
-  solicitarReset: async (email: string): Promise<{ ok: boolean; nome?: string; tipo?: string; erro?: string }> => {
-    const emailNorm = email.trim().toLowerCase();
-    const [assocs, emps] = await Promise.all([
-      apiRequest<unknown[]>('GET', '/associados'),
-      apiRequest<unknown[]>('GET', '/empresarios'),
-    ]);
-    type UserRaw = { id: number; nome: string; email?: string; perfil?: string; resetSolicitado?: boolean; dataResetSolicit?: string | null; [k: string]: unknown };
-    const assoc = (assocs as UserRaw[]).find((a) => (a.email || '').toLowerCase() === emailNorm);
-    const emp = !assoc ? (emps as UserRaw[]).find((u) => (u.email || '').toLowerCase() === emailNorm) : null;
-    const usuario = assoc ? { ...assoc, perfil: 'associado', _colecao: 'associados' } : emp ? { ...emp, _colecao: 'usuarios' } : null;
-    if (!usuario) return { ok: false, erro: 'E-mail não encontrado no sistema.' };
-    if (usuario.perfil === 'admin') return { ok: false, erro: 'Conta de administrador não pode solicitar reset por este canal.' };
-    const campos = { resetSolicitado: true, dataResetSolicit: new Date().toISOString() };
-    const endpoint = usuario._colecao === 'associados' ? `/associados/${usuario.id}` : `/empresarios/${usuario.id}`;
-    await apiRequest('PUT', endpoint, { ...usuario, ...campos });
-    return { ok: true, nome: usuario.nome, tipo: usuario._colecao === 'associados' ? 'Associado' : 'Empresa Parceira' };
+  // Rota pública: registra o pedido para o administrador sem exigir login nem revelar se o e-mail existe
+  solicitarReset: async (email: string): Promise<{ ok: boolean; nome?: string; tipo?: string; erro?: string; mensagem?: string }> => {
+    const res = await apiPost<{ ok: boolean; mensagem?: string }>('/auth/esqueci-senha', { email: email.trim() });
+    return { ok: true, mensagem: res?.mensagem };
   },
 
   // Define nova senha (para o caso de primeiroLogin/senhaExpirada pós-login)
   definirNovaSenha: async (id: number, colecao: 'associados' | 'usuarios', novaSenha: string): Promise<{ ok: boolean; erro?: string }> => {
-    if (novaSenha === '123456') return { ok: false, erro: 'A nova senha não pode ser a senha padrão (123456).' };
     if (novaSenha.length < 6) return { ok: false, erro: 'A senha deve ter pelo menos 6 caracteres.' };
     if (colecao === 'associados') {
       await apiRequest('PATCH', `/auth/associados/${id}/senha`, { senhaAtual: null, novaSenha });

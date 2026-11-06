@@ -45,6 +45,9 @@ public class EmpresarioPayloadMapper {
         resp.put("resetSolicitado", usuario.getResetSolicitado());
         resp.put("senhaExpirada", usuario.getSenhaExpirada());
         resp.put("dataResetSolicit", usuario.getDataResetSolicit());
+        if (usuario.getSenhaTemporaria() != null) {
+            resp.put("senhaTemporaria", usuario.getSenhaTemporaria());
+        }
 
         Map<String, Object> contratoMap = parseContrato(usuario.getContrato());
         Object logoImg = contratoMap.get("logo") != null ? contratoMap.get("logo") : contratoMap.get("foto");
@@ -90,12 +93,7 @@ public class EmpresarioPayloadMapper {
                         )
                 )
 
-                .senha(
-                        defaultIfBlank(
-                                textValue(payload.get("senha")),
-                                "123456"
-                        )
-                )
+                .senha(textValue(payload.get("senha")))
 
                 .perfil(
                         defaultIfBlank(

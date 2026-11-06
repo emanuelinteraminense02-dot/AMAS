@@ -321,11 +321,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function loadEstatisticas() {
     try {
-      state.estatisticas = await getEstatisticas();
+      // Totais públicos: não dependem de login (antes vinham do dashboard do administrador)
+      state.estatisticas = await getEstatisticasPublicas();
       renderEstatisticas();
     } catch (err) {
       console.warn("Erro ao carregar estatísticas:", err);
-      state.estatisticas = { total: 1, regulares: 1 };
+      state.estatisticas = { total: 0, regulares: 0 };
       renderEstatisticas();
     }
   }

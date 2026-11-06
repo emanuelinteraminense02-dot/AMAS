@@ -1,6 +1,7 @@
 package com.br.amas.demo.controller;
 
 import com.br.amas.demo.service.AssociadoService;
+import com.br.amas.demo.service.AuthService;
 
 import com.br.amas.demo.service.EmpresarioService;
 
@@ -39,6 +40,8 @@ public class AdminController {
     private final SolicitacaoService solicitacaoService;
 
     private final LogService logService;
+
+    private final AuthService authService;
 
     /** Dashboard: KPIs rápidos */
 
@@ -169,4 +172,14 @@ public class AdminController {
 
     }
 
+
+    /** Gera uma senha temporária para o associado ou a empresa e obriga a troca no próximo acesso. */
+    @PostMapping("/senhas/{colecao}/{id}/redefinir")
+    public ResponseEntity<?> redefinirSenha(@PathVariable String colecao, @PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(authService.redefinirPeloAdmin(colecao, id));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+    }
 }

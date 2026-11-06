@@ -129,9 +129,12 @@ async function cpfJaExiste(cpf, excluirId) {
 }
 
 async function buscarAssociadoCPF(cpf) {
-  const lista = await getAssociados();
-  const c = cpf.replace(/\D/g, "");
-  return lista.find(a => a.cpf.replace(/\D/g, "") === c) || null;
+  // Consulta mínima no servidor: a empresa parceira não recebe o cadastro completo dos associados
+  try {
+    return await apiAssociados.consultarCpf(cpf);
+  } catch (_) {
+    return null;
+  }
 }
 
 /* ─── CONTRIBUIÇÕES DE ASSOCIADOS ─────────────────────────────────── */
@@ -426,6 +429,15 @@ async function aprovarSolicitacao(id) { return apiAdmin.aprovarSolicitacao(id); 
 async function recusarSolicitacao(id, motivo) { return apiAdmin.recusarSolicitacao(id, motivo); }
 
 /* ─── ESTATÍSTICAS ─────────────────────────────────────────────────── */
+/* Totais públicos (sem dados pessoais) para a página inicial e a área da empresa parceira */
+async function getEstatisticasPublicas() {
+  try {
+    return await apiPublico.estatisticas();
+  } catch (_) {
+    return { total: 0, regulares: 0, totalAssociados: 0, totalEmpresarios: 0 };
+  }
+}
+
 async function getEstatisticas() {
   try {
     const res = await apiAdmin.getDashboard();
@@ -485,18 +497,10 @@ async function buscarPorEmail(email) {
 }
 
 async function solicitarResetSenha(email) {
-  const usuario = await buscarPorEmail(email);
-  if (!usuario) return { ok: false, erro: "E-mail não encontrado no sistema." };
-  if (usuario.perfil === "admin") return { ok: false, erro: "Conta de administrador não pode solicitar reset por este canal." };
-  const campos = { resetSolicitado: true, dataResetSolicit: new Date().toISOString() };
+  // Rota pública: funciona sem login e não revela se o e-mail tem cadastro
   try {
-    if (usuario._colecao === "associados") {
-      await atualizarAssociado(usuario.id, { ...usuario, ...campos });
-    } else {
-      await atualizarEmpresario(usuario.id, { ...usuario, ...campos });
-    }
-    registrarLog("Reset de senha solicitado", usuario.nome, usuario.perfil, "Solicitação enviada via tela de login");
-    return { ok: true, nome: usuario.nome, perfil: usuario.perfil, tipo: usuario.perfil === "associado" ? "Associado" : "Empresa Parceira" };
+    const res = await apiAuth.esqueciSenha(email);
+    return { ok: true, mensagem: res?.mensagem };
   } catch (e) { return { ok: false, erro: e.message }; }
 }
 
@@ -511,20 +515,11 @@ async function getResetsPendentes() {
 }
 
 async function processarResetAdmin(id, colecao) {
-  const campos = { senha: "123456", senhaExpirada: true, resetSolicitado: false, dataResetSolicit: null };
-  if (colecao === "associados") {
-    const a = await getAssociadoPorId(id);
-    await atualizarAssociado(id, { ...a, ...campos });
-    registrarLog("Senha resetada pelo Admin", getSessao()?.nome || "Admin", "admin", (a?.nome || "") + " — senha voltou ao padrão");
-  } else {
-    const u = await getEmpresarioPorId(id);
-    await atualizarEmpresario(id, { ...u, ...campos });
-    registrarLog("Senha resetada pelo Admin", getSessao()?.nome || "Admin", "admin", (u?.nome || "") + " — senha voltou ao padrão");
-  }
+  // O servidor gera uma senha temporária aleatória e obriga a troca no próximo acesso
+  return apiAdmin.redefinirSenha(colecao === "associados" ? "associados" : "usuarios", id);
 }
 
 async function definirNovaSenha(id, colecao, novaSenha) {
-  if (novaSenha === "123456") return { ok: false, erro: "A nova senha não pode ser a senha padrão (123456)." };
   if (novaSenha.length < 6)   return { ok: false, erro: "A senha deve ter pelo menos 6 caracteres." };
   try {
     if (colecao === "associados" || colecao === "associado") {

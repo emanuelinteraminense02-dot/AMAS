@@ -1,5 +1,6 @@
 package com.br.amas.demo.controller;
 
+import com.br.amas.demo.config.Acesso;
 import com.br.amas.demo.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +14,7 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final Acesso acesso;
 
     /**
      * POST /api/auth/login
@@ -66,6 +68,8 @@ public class AuthController {
             @RequestBody Map<String, String> body
     ) {
 
+        acesso.exigirAdminOuAssociado(id);
+
         try {
 
             String senhaAtual =
@@ -98,5 +102,22 @@ public class AuthController {
                             )
                     );
         }
+    }
+
+    /**
+     * POST /api/auth/esqueci-senha (rota pública)
+     * Body: { "email": "fulano@exemplo.com" }
+     */
+    @PostMapping("/esqueci-senha")
+    public ResponseEntity<?> esqueciSenha(@RequestBody Map<String, String> body) {
+        try {
+            authService.solicitarRedefinicao(body.get("email"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("erro", e.getMessage()));
+        }
+        return ResponseEntity.ok(Map.of(
+                "ok", true,
+                "mensagem", "Se o e-mail estiver cadastrado, o pedido foi enviado ao administrador."
+        ));
     }
 }

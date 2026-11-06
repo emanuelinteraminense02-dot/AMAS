@@ -1,3 +1,13 @@
+/* Mostra ao administrador a senha temporária gerada pelo servidor (exibida uma única vez). */
+function mostrarSenhaTemporaria(nome, senha) {
+  if (!senha) return;
+  window.prompt(
+    "Senha temporária de " + (nome || "usuário") + ".\n" +
+    "Copie e envie por um canal seguro. Ela não será exibida de novo e deverá ser trocada no primeiro acesso:",
+    senha
+  );
+}
+
 /* ─── ADMIN.JS v5 (async/await) ─────────────────────────────────── */
 
 if (typeof Chart !== "undefined") { Chart.defaults.animation = false; Chart.defaults.responsive = true; Chart.defaults.maintainAspectRatio = false; }
@@ -182,7 +192,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function limparFormularioCadastroUnificado(tipoInicial) {
     formCadastroUnif.reset();
     cadUnifErro.textContent = "";
-    document.getElementById("cadSenha").value = "123456";
+    document.getElementById("cadSenha").value = "";
     document.getElementById("cadStatus").value = "Pendente";
     document.getElementById("cadTipoParceria").value = "Parceiro de Benefício (Padrão)";
     setTipoCadastroUnificado(tipoInicial);
@@ -219,7 +229,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const email = document.getElementById("cadEmail").value.trim().toLowerCase();
     const telefone = document.getElementById("cadTel").value.trim();
     const endereco = document.getElementById("cadEnd").value.trim();
-    const senha = document.getElementById("cadSenha").value.trim() || "123456";
+    // Em branco: o servidor gera uma senha temporária aleatória
+    const senha = document.getElementById("cadSenha").value.trim() || null;
 
     if (!nome || !email) {
       cadUnifErro.textContent = "Preencha nome e e-mail.";
@@ -248,7 +259,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           return;
         }
 
-        await adicionarEmpresario({
+        const novaEmpresa = await adicionarEmpresario({
           nome,
           email,
           senha,
@@ -262,6 +273,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderContratos();
         renderSolicitacoes();
         showToast("Empresa parceira cadastrada com sucesso.", "success");
+        mostrarSenhaTemporaria(nome, novaEmpresa?.senhaTemporaria);
         registrarLog("Empresa cadastrada", sessao.nome, "admin", nome);
         return;
       }
@@ -284,7 +296,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return;
       }
 
-      await adicionarAssociado({
+      const novoAssociado = await adicionarAssociado({
         nome,
         cpf,
         nascimento: nascimento || null,
@@ -301,6 +313,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderAssociados();
       renderSolicitacoes();
       showToast("Associado cadastrado com sucesso.", "success");
+      mostrarSenhaTemporaria(nome, novoAssociado?.senhaTemporaria);
       registrarLog("Associado cadastrado", sessao.nome, "admin", nome);
     } catch (ex) {
       cadUnifErro.textContent = ex.message || "Erro ao salvar cadastro.";
@@ -535,7 +548,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("modalAssocTitulo").textContent = "Novo Associado";
     document.getElementById("formAssoc").reset();
     document.getElementById("assocIdEdit").value = "";
-    document.getElementById("assocSenha").value  = "123456";
+    document.getElementById("assocSenha").value  = "";
     document.getElementById("modalAssoc").classList.remove("hidden");
   });
 
@@ -553,7 +566,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const prof   = document.getElementById("assocProf").value.trim();
     const end    = document.getElementById("assocEnd").value.trim();
     const status = document.getElementById("assocStatus").value;
-    const senha  = document.getElementById("assocSenha").value.trim() || "123456";
+    const senha  = document.getElementById("assocSenha").value.trim() || null;
     const err    = document.getElementById("assocErro");
     err.textContent = "";
     if (!nome)  { err.textContent = "Nome é obrigatório."; return; }
@@ -563,11 +576,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       const cpfExiste = await cpfJaExiste(cpf, idEdit ? parseInt(idEdit) : null);
       if (cpfExiste) { err.textContent = "Este CPF já está cadastrado."; return; }
       if (idEdit) {
-        await atualizarAssociado(parseInt(idEdit), { nome, cpf, nascimento:nasc, telefone:tel, email, profissao:prof, endereco:end, status, senha });
+        // Senha em branco na edição mantém a senha atual (antes, voltava para 123456)
+        const dadosEd = { nome, cpf, nascimento:nasc, telefone:tel, email, profissao:prof, endereco:end, status };
+        if (senha) dadosEd.senha = senha;
+        await atualizarAssociado(parseInt(idEdit), dadosEd);
         showToast("Associado atualizado!", "success");
       } else {
-        await adicionarAssociado({ nome, cpf, nascimento:nasc, telefone:tel, email, profissao:prof, endereco:end, status, senha, primeiroLogin:true });
+        const novo = await adicionarAssociado({ nome, cpf, nascimento:nasc, telefone:tel, email, profissao:prof, endereco:end, status, senha, primeiroLogin:true });
         showToast("Associado cadastrado!", "success");
+        mostrarSenhaTemporaria(nome, novo?.senhaTemporaria);
       }
       document.getElementById("modalAssoc").classList.add("hidden");
       renderAssociados();
@@ -1326,7 +1343,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       const novo = await aprovarSolicitacao(id);
       renderSolicitacoes();
-      showToast("Membro cadastrado! Senha inicial: 123456", "success");
+      showToast("Membro cadastrado!", "success");
+      mostrarSenhaTemporaria(novo?.nome, novo?.senhaTemporaria);
       registrarLog("Solicitação aprovada", sessao.nome, "admin", novo ? novo.nome + " aprovado." : "");
     } catch (e) { showToast("Erro: " + e.message, "error"); }
   };
@@ -1369,11 +1387,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   window._renderRecuperacaoImpl = renderRecuperacao;
 
   window.processarReset = async function(id, colecao) {
-    if (!confirm("Resetar a senha deste usuário para '123456'?\nEle precisará alterá-la no próximo login.")) return;
+    if (!confirm("Gerar uma senha temporária para este usuário?\nEle precisará criar uma nova senha no próximo login.")) return;
     try {
-      await processarResetAdmin(id, colecao);
+      const res = await processarResetAdmin(id, colecao);
       renderRecuperacao(); atualizarBadges();
-      showToast("Senha resetada para 123456.", "success");
+      showToast("Senha temporária gerada.", "success");
+      mostrarSenhaTemporaria(res?.nome, res?.senhaTemporaria);
     } catch (e) { showToast("Erro: " + e.message, "error"); }
   };
 

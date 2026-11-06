@@ -61,4 +61,9 @@ public class Associado {
     private String foto;
 
     private LocalDateTime dataResetSolicit;
+
+    /** Senha temporária gerada no cadastro ou na redefinição; não é gravada no banco e só aparece na resposta da operação. */
+    @Transient
+    @com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)
+    private String senhaTemporaria;
 }

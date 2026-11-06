@@ -39,6 +39,8 @@ public class SecurityConfig {
 
                         // Endpoints públicos de autenticação e navegação institucional
                         .requestMatchers("/api/auth/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/esqueci-senha").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/publico/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/solicitacoes").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/noticias/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/eventos/**").permitAll()

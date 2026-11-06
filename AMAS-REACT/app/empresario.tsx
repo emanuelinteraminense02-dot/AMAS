@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { colors, radius, spacing } from '@/constants/theme';
-import { apiAssociados, apiEmpresarios, sessaoStorage } from '@/services/api';
+import { apiPublico, apiAssociados, apiEmpresarios, sessaoStorage } from '@/services/api';
 import { registrarLog } from '@/services/adminHelpers';
 import { maskCPF } from '@/utils/validators';
 import { AdminButton, Card, CardTitleRow, EmptyState, FormField, LoadingBlock } from '@/components/admin/AdminUI';
@@ -95,8 +95,8 @@ function ConsultaSection({ empresa, onConsulta }: { empresa: Empresario; onConsu
     if (!cpf.trim()) { setErro('Digite um CPF para consultar.'); return; }
     setBuscando(true); setErro(''); setResultado(undefined);
     try {
-      const associados = await apiAssociados.listar() as Associado[];
-      const encontrado = associados.find((a) => a.cpf.replace(/\D/g, '') === cpf.replace(/\D/g, '')) || null;
+      // Consulta mínima no servidor: a empresa não recebe o cadastro completo dos associados
+      const encontrado = (await apiAssociados.consultarCpf(cpf).catch(() => null)) as Associado | null;
       setResultado(encontrado);
       if (encontrado) {
         const liberado = encontrado.status === 'Regular';
@@ -148,7 +148,7 @@ function ParceriaSection({ empresa, onUpdated }: { empresa: Empresario; onUpdate
 
 function ImpactoSection() {
   const [numeros, setNumeros] = useState({ total: 0, regulares: 0 });
-  useEffect(() => { apiAssociados.listar().then((lista) => { const items = lista as Associado[]; setNumeros({ total: items.length, regulares: items.filter((a) => a.status === 'Regular').length }); }).catch(() => {}); }, []);
+  useEffect(() => { apiPublico.estatisticas().then((e) => { const est = e as { total?: number; regulares?: number }; setNumeros({ total: est.total || 0, regulares: est.regulares || 0 }); }).catch(() => {}); }, []);
   return <Card><CardTitleRow title="Alcance da parceria" icon="stats-chart-outline" /><View style={styles.kpis}>{[["people-outline", numeros.total, 'Total de associados'], ["checkmark-circle-outline", numeros.regulares, 'Associados regulares'], ["bullseye-outline", numeros.regulares, 'Clientes potenciais']].map(([icon, valor, texto]) => <View key={String(texto)} style={styles.kpi}><Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={22} color={colors.azulMid} /><Text style={styles.kpiValue}>{valor}</Text><Text style={styles.kpiLabel}>{texto}</Text></View>)}</View><Text style={styles.description}>Sua empresa ganha visibilidade para os associados ativos da AMAS em São Sebastião/DF.</Text></Card>;
 }
 

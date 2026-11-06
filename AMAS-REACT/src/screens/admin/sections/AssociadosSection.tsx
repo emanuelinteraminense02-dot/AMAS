@@ -20,7 +20,7 @@ const FILTROS_STATUS: { label: string; value: StatusAssociado | '' }[] = [
 
 const FORM_VAZIO = {
   nome: '', cpf: '', nascimento: '', telefone: '', email: '', profissao: '', endereco: '',
-  status: 'Pendente' as StatusAssociado, senha: '123456',
+  status: 'Pendente' as StatusAssociado, senha: '',
 };
 
 export function AssociadosSection() {
@@ -100,11 +100,14 @@ export function AssociadosSection() {
         setErroForm('Este CPF já está cadastrado.');
         return;
       }
-      const payload = { ...form, senha: form.senha || '123456' };
+      // Senha em branco: no cadastro o servidor gera uma senha temporária; na edição, a senha atual é mantida
+      const { senha, ...resto } = form;
+      const payload = senha ? { ...resto, senha } : resto;
       if (editandoId) {
         await apiAssociados.atualizar(editandoId, payload);
       } else {
-        await apiAssociados.criar({ ...payload, primeiroLogin: true });
+        const novo = (await apiAssociados.criar({ ...payload, primeiroLogin: true })) as { senhaTemporaria?: string };
+        if (novo?.senhaTemporaria) Alert.alert('Senha temporária', `Envie ao associado por um canal seguro: ${novo.senhaTemporaria}`);
       }
       setModalAberto(false);
       await carregar();
@@ -250,7 +253,7 @@ export function AssociadosSection() {
           ))}
         </View>
 
-        <FormField label="Senha inicial" value={form.senha} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder="123456" />
+        <FormField label="Senha inicial" value={form.senha} onChangeText={(v) => setForm((f) => ({ ...f, senha: v }))} placeholder="Em branco: senha temporária" />
 
         {erroForm ? <Text style={styles.erro}>{erroForm}</Text> : null}
       </ModalSheet>

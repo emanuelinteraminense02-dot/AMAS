@@ -16,7 +16,7 @@ const TIPOS_PARCERIA: TipoParceria[] = [
   'Apoio Institucional',
 ];
 
-const FORM_EMP_VAZIO = { nome: '', cnpj: '', email: '', telefone: '', endereco: '', senha: '123456' };
+const FORM_EMP_VAZIO = { nome: '', cnpj: '', email: '', telefone: '', endereco: '', senha: '' };
 
 const FORM_CONT_VAZIO: Partial<ContratoEmpresa> = {
   tipoAcordo: 'Parceiro de Benefício (Padrão)',
@@ -96,9 +96,13 @@ export function ContratosSection() {
     try {
       const existe = await cnpjJaExiste(formEmp.cnpj, editandoId);
       if (existe) return setErroEmp('Este CNPJ já está cadastrado.');
-      const payload = { ...formEmp, senha: formEmp.senha || '123456' };
+      const { senha, ...resto } = formEmp;
+      const payload = senha ? { ...resto, senha } : resto;
       if (editandoId) await apiEmpresarios.atualizar(editandoId, payload);
-      else await apiEmpresarios.criar({ ...payload, primeiroLogin: true });
+      else {
+        const nova = (await apiEmpresarios.criar({ ...payload, primeiroLogin: true })) as { senhaTemporaria?: string };
+        if (nova?.senhaTemporaria) Alert.alert('Senha temporária', `Envie à empresa por um canal seguro: ${nova.senhaTemporaria}`);
+      }
       setEmpModalAberto(false);
       await carregar();
     } catch (e) {
@@ -240,7 +244,7 @@ export function ContratosSection() {
           keyboardType="phone-pad"
         />
         <FormField label="Endereço" value={formEmp.endereco} onChangeText={(v) => setFormEmp((f) => ({ ...f, endereco: v }))} />
-        <FormField label="Senha inicial" value={formEmp.senha} onChangeText={(v) => setFormEmp((f) => ({ ...f, senha: v }))} placeholder="123456" />
+        <FormField label="Senha inicial" value={formEmp.senha} onChangeText={(v) => setFormEmp((f) => ({ ...f, senha: v }))} placeholder="Em branco: senha temporária" />
         {erroEmp ? <Text style={styles.erro}>{erroEmp}</Text> : null}
       </ModalSheet>
 

@@ -114,7 +114,6 @@ public class SolicitacaoService {
             Usuario empresa = Usuario.builder()
                     .nome(s.getNome())
                     .email(s.getEmail())
-                    .senha("123456")
                     .perfil("empresario")
                     .cnpj(s.getCnpj())
                     .telefone(s.getTelefone())

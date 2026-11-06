@@ -202,4 +202,72 @@ public class AuthService {
 
         return m;
     }
+
+    // =============================================================
+    // REDEFINIÇÃO DE SENHA
+    // =============================================================
+
+    /**
+     * Pedido público de redefinição ("Esqueci minha senha"). Marca a conta para o administrador.
+     * A resposta é sempre a mesma, exista ou não o e-mail, para não revelar quem tem cadastro.
+     */
+    public void solicitarRedefinicao(String email) {
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("Informe o e-mail cadastrado.");
+        }
+        String emailNorm = email.trim().toLowerCase();
+        java.time.LocalDateTime agora = java.time.LocalDateTime.now();
+
+        Optional<Associado> assoc = associadoRepository.findByEmail(emailNorm);
+        if (assoc.isPresent()) {
+            Associado a = assoc.get();
+            a.setResetSolicitado(true);
+            a.setDataResetSolicit(agora);
+            associadoRepository.save(a);
+            logService.registrar("Reset de senha solicitado", a.getNome(), "associado", "Solicitação enviada via tela de login");
+            return;
+        }
+        usuarioRepository.findByEmail(emailNorm)
+                .filter(u -> !"admin".equalsIgnoreCase(u.getPerfil()))
+                .ifPresent(u -> {
+                    u.setResetSolicitado(true);
+                    u.setDataResetSolicit(agora);
+                    usuarioRepository.save(u);
+                    logService.registrar("Reset de senha solicitado", u.getNome(), u.getPerfil(), "Solicitação enviada via tela de login");
+                });
+    }
+
+    /**
+     * Redefinição feita pelo administrador: gera uma senha temporária aleatória,
+     * obriga a troca no próximo acesso e devolve a senha uma única vez.
+     */
+    public Map<String, Object> redefinirPeloAdmin(String colecao, Long id) {
+        String temporaria = SenhaTemporaria.gerar();
+        String nome;
+        if ("associados".equalsIgnoreCase(colecao) || "associado".equalsIgnoreCase(colecao)) {
+            Associado a = associadoRepository.findById(id).orElseThrow(() -> new RuntimeException("Associado não encontrado."));
+            a.setSenha(passwordEncoder.encode(temporaria));
+            a.setSenhaExpirada(true);
+            a.setResetSolicitado(false);
+            a.setDataResetSolicit(null);
+            associadoRepository.save(a);
+            nome = a.getNome();
+        } else {
+            Usuario u = usuarioRepository.findById(id).orElseThrow(() -> new RuntimeException("Usuário não encontrado."));
+            if ("admin".equalsIgnoreCase(u.getPerfil())) {
+                throw new RuntimeException("A senha do administrador não pode ser redefinida por esta tela.");
+            }
+            u.setSenha(passwordEncoder.encode(temporaria));
+            u.setSenhaExpirada(true);
+            u.setResetSolicitado(false);
+            u.setDataResetSolicit(null);
+            usuarioRepository.save(u);
+            nome = u.getNome();
+        }
+        logService.registrar("Senha redefinida pelo Admin", "Admin", "admin", nome + " — senha temporária gerada");
+        Map<String, Object> r = new HashMap<>();
+        r.put("nome", nome);
+        r.put("senhaTemporaria", temporaria);
+        return r;
+    }
 }

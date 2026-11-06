@@ -49,7 +49,12 @@ public class AssociadoService {
         }
 
         associado.setDataEntrada(associado.getDataEntrada() != null ? associado.getDataEntrada() : LocalDate.now());
-        String rawSenha = (associado.getSenha() == null || associado.getSenha().isBlank()) ? "123456" : associado.getSenha();
+        String rawSenha = associado.getSenha();
+        if (rawSenha == null || rawSenha.isBlank()) {
+            rawSenha = SenhaTemporaria.gerar();
+            associado.setSenhaTemporaria(rawSenha);
+            associado.setPrimeiroLogin(true);
+        }
         associado.setSenha(rawSenha.startsWith("$2") ? rawSenha : passwordEncoder.encode(rawSenha));
         associado.setPrimeiroLogin(associado.getPrimeiroLogin() == null || associado.getPrimeiroLogin());
         associado.setSenhaExpirada(Boolean.TRUE.equals(associado.getSenhaExpirada()));
