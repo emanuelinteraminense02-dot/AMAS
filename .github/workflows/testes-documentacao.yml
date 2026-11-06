@@ -1,0 +1,55 @@
+name: Testes para a documentação
+
+on:
+  push:
+    branches: [ "ci/testes-documentacao" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Executar testes (gradlew test)
+        id: testes
+        working-directory: backend
+        run: |
+          chmod +x gradlew
+          set +e
+          ./gradlew test --no-daemon --console=plain 2>&1 | tee ../saida-gradlew-test.txt
+          echo "exit=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+          java -version 2>> ../saida-gradlew-test.txt
+          date -u +"Executado em %Y-%m-%dT%H:%M:%SZ (UTC)" >> ../saida-gradlew-test.txt
+
+      - name: Gerar o JAR da API
+        working-directory: backend
+        run: ./gradlew bootJar -x test --no-daemon --console=plain
+
+      - name: Empacotar relatórios, JAR e dependências
+        run: |
+          mkdir -p pacote
+          tar czf pacote/relatorio-testes.tgz -C backend/build reports/tests test-results
+          cp saida-gradlew-test.txt pacote/
+          cp backend/build/libs/*.jar pacote/amas-api.jar
+          tar czf pacote/gradle-cache.tgz -C ~/.gradle caches/modules-2 wrapper/dists
+          tar czf pacote/jdk17.tgz -C "$(dirname "$JAVA_HOME")" "$(basename "$JAVA_HOME")"
+          echo "${{ steps.testes.outputs.exit }}" > pacote/exit-code.txt
+          ls -la pacote
+
+      - name: Publicar pré-release com os resultados
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="ci-testes-${{ github.run_number }}"
+          gh release create "$TAG" pacote/* --prerelease --target "${{ github.sha }}" \
+            --title "Resultados dos testes (execução ${{ github.run_number }})" \
+            --notes "Execução automática de ./gradlew test para a documentação. Commit ${{ github.sha }}. Código de saída: ${{ steps.testes.outputs.exit }}."
