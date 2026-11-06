@@ -1,0 +1,46 @@
+name: Testes
+
+# Roda a cada envio (push) e em pull requests: testes do backend e checagem de tipos do aplicativo.
+on:
+  push:
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (JUnit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Executar testes
+        working-directory: backend
+        run: |
+          chmod +x gradlew
+          ./gradlew test --no-daemon --console=plain
+      - name: Publicar relatório dos testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorio-testes-backend
+          path: backend/build/reports/tests/test
+
+  aplicativo:
+    name: Aplicativo Expo (TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: AMAS-REACT/package-lock.json
+      - name: Instalar dependências
+        working-directory: AMAS-REACT
+        run: npm ci --no-audit --no-fund
+      - name: Checagem de tipos
+        working-directory: AMAS-REACT
+        run: npx tsc --noEmit

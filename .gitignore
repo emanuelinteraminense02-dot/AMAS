@@ -1,0 +1,3 @@
+# Dumps do banco podem conter dados pessoais (LGPD): não versionar
+backup-*.sql
+*.dump
