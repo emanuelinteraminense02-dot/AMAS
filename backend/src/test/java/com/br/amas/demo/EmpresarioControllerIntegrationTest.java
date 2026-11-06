@@ -1,8 +1,10 @@
 package com.br.amas.demo;
 
+import com.br.amas.demo.config.JwtService;
 import com.br.amas.demo.model.Usuario;
 import com.br.amas.demo.repository.UsuarioRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -35,6 +37,30 @@ class EmpresarioControllerIntegrationTest {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
+    @Autowired
+    private JwtService jwtService;
+
+    /** Token de administrador: as rotas /api/empresarios exigem JWT desde a Sprint 4. */
+    private String bearer;
+
+    /**
+     * Massa de dados própria do teste: a carga de demonstração (DataLoader) foi desativada,
+     * então o empresário usado nas consultas e atualizações é criado aqui.
+     */
+    @BeforeEach
+    void prepararDados() {
+        bearer = "Bearer " + jwtService.gerarToken(0L, "admin.teste@amas.com", "Administrador Teste", "admin");
+        usuarioRepository.save(Usuario.builder()
+                .nome("Empresa Teste LTDA")
+                .email("empresa.teste@amas.com")
+                .senha("123456")
+                .perfil("empresario")
+                .cnpj("11.222.333/0001-81")
+                .contrato("{\"tipoAcordo\":\"Parceiro de Beneficio (Padrao)\",\"beneficioOfertado\":\"10% de desconto em todos os produtos\",\"beneficiosValidados\":false}")
+                .unidades("[{\"id\":1,\"nome\":\"Unidade Central\",\"endereco\":\"Rua A, 10\"},{\"id\":2,\"nome\":\"Unidade Norte\",\"endereco\":\"Rua B, 20\"}]")
+                .build());
+    }
+
     @Test
     void cadastrarEmpresarioAceitaContratoComoObjetoJson() throws Exception {
         Map<String, Object> payload = Map.of(
@@ -49,7 +75,7 @@ class EmpresarioControllerIntegrationTest {
                 )
         );
 
-        mockMvc.perform(post("/api/empresarios")
+        mockMvc.perform(post("/api/empresarios").header("Authorization", bearer)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isOk())
@@ -66,7 +92,7 @@ class EmpresarioControllerIntegrationTest {
                 .findFirst()
                 .orElseThrow();
 
-        mockMvc.perform(get("/api/empresarios/{id}", empresario.getId()))
+        mockMvc.perform(get("/api/empresarios/{id}", empresario.getId()).header("Authorization", bearer))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nome").value(empresario.getNome()))
                 .andExpect(jsonPath("$.contrato.beneficioOfertado").value("10% de desconto em todos os produtos"))
@@ -92,7 +118,7 @@ class EmpresarioControllerIntegrationTest {
                 )
         );
 
-        mockMvc.perform(put("/api/empresarios/{id}", empresario.getId())
+        mockMvc.perform(put("/api/empresarios/{id}", empresario.getId()).header("Authorization", bearer)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isOk())
@@ -101,7 +127,7 @@ class EmpresarioControllerIntegrationTest {
                 .andExpect(jsonPath("$.unidades", hasSize(2)))
                 .andExpect(jsonPath("$.unidades[1].nome").value("Filial"));
 
-        mockMvc.perform(get("/api/empresarios/{id}", empresario.getId()))
+        mockMvc.perform(get("/api/empresarios/{id}", empresario.getId()).header("Authorization", bearer))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nome").value(empresario.getNome()))
                 .andExpect(jsonPath("$.contrato.beneficioOfertado").value("15% de desconto"))
@@ -121,7 +147,7 @@ class EmpresarioControllerIntegrationTest {
                 "dataResetSolicit", "2026-05-04T10:15:00"
         );
 
-        mockMvc.perform(put("/api/empresarios/{id}", empresario.getId())
+        mockMvc.perform(put("/api/empresarios/{id}", empresario.getId()).header("Authorization", bearer)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(payload)))
                 .andExpect(status().isOk())
