@@ -308,6 +308,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     dashboard: ["Dashboard Financeiro",   "Performance e projeções do seu negócio"],
     parceria:  ["Minha Parceria",         "Contrato, contribuições e benefícios AMAS"],
     unidades:  ["Minhas Unidades",        "Gerencie seus estabelecimentos"],
+    contribuicoes: ["Minhas Contribuições", "Registro mensal e valor devido à AMAS"],
     alerta:    ["Enviar Alerta",          "Comunicação direta com o administrador"],
     chat:      ["Chat com a Administração", "Canal exclusivo para propostas, dúvidas e documentos com a Diretoria AMAS"],
     historico: ["Histórico de Consultas", "Consultas realizadas nesta sessão"]
@@ -326,6 +327,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (sec === "unidades")  renderUnidades();
       if (sec === "chat")      window.chatUI?.iniciarCliente('empresario');
       if (sec === "historico") renderHistorico();
+      if (sec === "contribuicoes") renderContribuicoes();
       if (window.amasSidebar) {
         window.amasSidebar.close();
       } else {
@@ -465,9 +467,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     const el = document.getElementById("impactoBody");
     if (!el) return;
     try {
-      const assocs    = await getAssociados();
-      const regulares = assocs.filter(a => a.status === "Regular").length;
-      const total     = assocs.length;
+      const est       = await getEstatisticasPublicas();
+      const regulares = est.regulares || 0;
+      const total     = est.total || 0;
       el.innerHTML =
           '<div class="impacto-kpis">' +
           impactoKpi('<i class="bi bi-people"></i>',"Total de associados",total,"var(--azul-mid)") +
@@ -549,6 +551,89 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("formAlerta").reset();
       showToast(urgente ? "Alerta URGENTE enviado!" : "Alerta enviado!", "success");
     } catch (ex) { showToast("Erro ao enviar: " + ex.message, "error"); }
+  });
+
+  // ══════════════════════════════════════════════
+  // CONTRIBUIÇÕES DA EMPRESA (cálculo pelo MotorFinanceiroService)
+  // ══════════════════════════════════════════════
+  const fmtBRL = v => (Number(v) || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  function parceriaValidada() {
+    const c = (typeof emp.contrato === "object" && emp.contrato) ? emp.contrato : {};
+    return c.beneficiosValidados === true || c.beneficiosValidados === "true";
+  }
+
+  // Prévia no navegador com as mesmas regras do servidor (o valor oficial é o calculado pela API)
+  function previaContribuicao(renda) {
+    const c = (typeof emp.contrato === "object" && emp.contrato) ? emp.contrato : {};
+    if (!(renda > 0) || renda <= 5000) return { valor: 0, faixa: 1, texto: "Faixa 1 — isento" };
+    if (renda <= 10000) {
+      const v = Math.max(100, Math.round(renda * 2) / 100);
+      return { valor: v, faixa: 2, texto: "Faixa 2 — maior valor entre R$ 100,00 e 2%" };
+    }
+    const aliq = parseFloat(c.aliquotaContratual);
+    const perc = aliq > 0 ? aliq : (parceriaValidada() ? 3 : 5);
+    const origem = aliq > 0 ? "alíquota do contrato" : (parceriaValidada() ? "parceria validada" : "parceria ainda não validada");
+    return { valor: Math.round(renda * perc) / 100, faixa: 3, texto: "Faixa 3 — " + perc + "% (" + origem + ")" };
+  }
+
+  const ceLiquida = document.getElementById("ceLiquida");
+  ceLiquida?.addEventListener("input", () => {
+    const p = previaContribuicao(parseFloat(ceLiquida.value));
+    document.getElementById("cePrevia").innerHTML =
+        "<strong>Prévia:</strong> " + p.texto + " · valor estimado <strong>" + fmtBRL(p.valor) + "</strong>";
+  });
+
+  async function renderContribuicoes() {
+    const el = document.getElementById("listaContribEmp");
+    if (!el) return;
+    try {
+      const lista = await getDoacoes(sessao.id);
+      if (!Array.isArray(lista) || !lista.length) {
+        el.innerHTML = '<p class="hist-empty">Nenhuma contribuição registrada ainda.</p>'; return;
+      }
+      el.innerHTML = lista.slice().sort((a, b) => String(b.mes).localeCompare(String(a.mes))).map(c =>
+          '<div class="hist-item">' +
+          '<div><div class="hist-item-nome">' + c.mes + ' — ' + fmtBRL(c.valorDevido) + '</div>' +
+          '<div class="hist-item-cpf">Renda líquida ' + fmtBRL(c.rendaLiquida) + ' · faixa ' + (c.faixa || "—") +
+          (c.isento ? ' · isento' : ' · alíquota ' + (c.aliquotaAplicada ?? "—") + '%') +
+          (c.obsAdmin ? ' · Admin: ' + c.obsAdmin : '') + '</div></div>' +
+          '<span class="badge ' + (c.status === "Confirmado" || c.status === "Aprovado" ? "badge-regular" : "badge-analise") + '">' + (c.status || "Aguardando") + '</span>' +
+          '</div>'
+      ).join("");
+    } catch (e) {
+      el.innerHTML = '<p class="hist-empty">Não foi possível carregar as contribuições.</p>';
+    }
+  }
+
+  document.getElementById("formContribEmp")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const erro = document.getElementById("ceErro");
+    erro.style.display = "none";
+    const mes = document.getElementById("ceMes").value;
+    const bruta = parseFloat(document.getElementById("ceBruta").value);
+    const liquida = parseFloat(document.getElementById("ceLiquida").value);
+    if (!mes || !(bruta >= 0) || !(liquida >= 0)) {
+      erro.textContent = "Preencha o mês, a renda bruta e a renda líquida."; erro.style.display = "block"; return;
+    }
+    if (liquida > bruta) {
+      erro.textContent = "A renda líquida não pode ser maior que a renda bruta."; erro.style.display = "block"; return;
+    }
+    const btn = document.getElementById("ceEnviar");
+    btn.disabled = true;
+    try {
+      const c = await registrarContribuicaoEmpresario(sessao.id, {
+        mes, rendaBruta: bruta, rendaLiquida: liquida,
+        ...(document.getElementById("ceObs").value.trim() ? { observacoes: document.getElementById("ceObs").value.trim() } : {})
+      });
+      showToast("Contribuição registrada: " + fmtBRL(c?.valorDevido), "success");
+      registrarLog("Contribuição registrada", emp.nome, "empresario", mes + " — " + fmtBRL(c?.valorDevido));
+      e.target.reset();
+      document.getElementById("cePrevia").textContent = "Preencha a renda líquida para ver a prévia do valor.";
+      renderContribuicoes();
+    } catch (ex) {
+      erro.textContent = ex.message || "Erro ao registrar a contribuição."; erro.style.display = "block";
+    } finally { btn.disabled = false; }
   });
 
   // ══════════════════════════════════════════════
